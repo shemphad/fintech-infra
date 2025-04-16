@@ -1,0 +1,96 @@
+name: "Terraform-eks-Deployment"
+
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Deployment Environment (dev, uat, prod)"
+        required: true
+        default: "prod"
+      region:
+        description: "AWS Region"
+        required: true
+        default: "us-east-2"
+      action:
+        description: "Terraform action to perform: apply or destroy"
+        required: false
+        default: "destroy"
+
+concurrency:
+  group: terraform-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  terraform_deployment:
+    name: "Terraform AWS Infra Deployment"
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    timeout-minutes: 120
+    env:
+      TF_ENV: ${{ github.event.inputs.environment || 'prod' }}
+      AWS_REGION: ${{ github.event.inputs.region || 'us-east-2' }}
+      TF_WORKING_DIR: ./${{ github.event.inputs.environment || 'prod' }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    steps:
+    - name: "Checkout Repository"
+      uses: actions/checkout@v3
+
+    - name: "Setup Node.js"
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16'
+
+    - name: "Cache Terraform Providers"
+      uses: actions/cache@v3
+      with:
+        path: ~/.terraform.d/plugin-cache
+        key: ${{ runner.os }}-terraform-${{ hashFiles('**/*.tf') }}
+
+    - name: "Setup Terraform"
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: "1.5.0"
+        cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+
+    - name: "Display Terraform Version"
+      run: terraform version
+
+    - name: "Terraform Fmt Check"
+      working-directory: ${{ env.TF_WORKING_DIR }}
+      run: terraform fmt -check
+
+    - name: "Terraform Init"
+      working-directory: ${{ env.TF_WORKING_DIR }}
+      run: terraform init -backend-config="key=${{ env.TF_ENV }}/terraform.tfstate"
+
+    - name: "Terraform Plan"
+      working-directory: ${{ env.TF_WORKING_DIR }}
+      run: terraform plan -out=tfplan -lock=false
+
+    - name: "Terraform Apply"
+      if: ${{ (github.event.inputs.action || 'apply') == 'apply' }}
+      working-directory: ${{ env.TF_WORKING_DIR }}
+      run: |
+        set -e
+        terraform destroy -auto-approve -lock=false
+
+
+    - name: "Terraform Destroy"
+      if: ${{ (github.event.inputs.action || 'apply') == 'destroy' }}
+      working-directory: ${{ env.TF_WORKING_DIR }}
+      run: |
+        set -e
+        terraform destroy -auto-approve -lock=false|| echo "Terraform destroy encountered an issue."
+      continue-on-error: true
+
+    - name: "Cleanup Terraform Plan"
+      if: always()
+      working-directory: ${{ env.TF_WORKING_DIR }}
+      run: rm -f tfplan
