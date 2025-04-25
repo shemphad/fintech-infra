@@ -1,16 +1,18 @@
-name: "Terraform-eks-Deployment"
+name: "Terraform-AWS-Infra-Deployment"
 
 on:
   push:
     branches:
     - main
+    
   pull_request:
     branches:
-    - main
+    - main 
+    - release
   workflow_dispatch:
     inputs:
       environment:
-        description: "Deployment Environment (dev, uat, prod)"
+        description: "Deployment Environment (dev, qa, uat, prod)"
         required: true
         default: "prod"
       region:
@@ -20,7 +22,7 @@ on:
       action:
         description: "Terraform action to perform: apply or destroy"
         required: false
-        default: "destroy"
+        default: "apply"
 
 concurrency:
   group: terraform-${{ github.ref }}
