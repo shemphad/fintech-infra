@@ -1,6 +1,6 @@
 variable "aws_account_id" {
   description = "AWS Account ID"
-  default     = "992382750832"
+  default     = "999568710647"
 }
 
 variable "tags" {
