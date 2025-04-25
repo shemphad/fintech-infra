@@ -1,14 +1,10 @@
-name: "Terraform-AWS-Infra-Deployment"
+name: Terraform-AWS-Infra-Deployment
 
 on:
   push:
-    branches:
-    - main
-    
+    branches: [main]
   pull_request:
-    branches:
-    - main 
-    - release
+    branches: [main]
   workflow_dispatch:
     inputs:
       environment:
@@ -20,7 +16,7 @@ on:
         required: true
         default: "us-east-2"
       action:
-        description: "Terraform action to perform: apply or destroy"
+        description: "Terraform action: apply (default) or destroy"
         required: false
         default: "apply"
 
@@ -29,70 +25,74 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  terraform_deployment:
-    name: "Terraform AWS Infra Deployment"
+  plan:
+    name: Plan
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment }}
-    timeout-minutes: 120
     env:
       TF_ENV: ${{ github.event.inputs.environment || 'prod' }}
       AWS_REGION: ${{ github.event.inputs.region || 'us-east-2' }}
-      TF_WORKING_DIR: ./${{ github.event.inputs.environment || 'prod' }}
+      TF_DIR: ${{ github.event.inputs.environment || 'prod' }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
     steps:
-    - name: "Checkout Repository"
-      uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - name: "Setup Node.js"
-      uses: actions/setup-node@v3
-      with:
-        node-version: '16'
+      - uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: "1.5.0"
 
-    - name: "Cache Terraform Providers"
-      uses: actions/cache@v3
-      with:
-        path: ~/.terraform.d/plugin-cache
-        key: ${{ runner.os }}-terraform-${{ hashFiles('**/*.tf') }}
+      - name: Verify working dir
+        run: |
+          echo "Looking in './${{ env.TF_DIR }}'"
+          ls -l ./${{ env.TF_DIR }}
 
-    - name: "Setup Terraform"
-      uses: hashicorp/setup-terraform@v2
-      with:
-        terraform_version: "1.5.0"
-        cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+      - name: Terraform fmt
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform fmt -check
 
-    - name: "Display Terraform Version"
-      run: terraform version
+      - name: Terraform init
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform init -backend-config="key=${{ env.TF_ENV }}/terraform.tfstate"
 
-    - name: "Terraform Fmt Check"
-      working-directory: ${{ env.TF_WORKING_DIR }}
-      run: terraform fmt -check
+      - name: Terraform plan
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform plan -lock=false
 
-    - name: "Terraform Init"
-      working-directory: ${{ env.TF_WORKING_DIR }}
-      run: terraform init -backend-config="key=${{ env.TF_ENV }}/terraform.tfstate"
+  approve:
+    name: Await Approval
+    runs-on: ubuntu-latest
+    needs: plan
+    environment: ${{ github.event.inputs.environment || 'prod' }}
+    steps:
+      - run: echo "✅ Approve or ❌ Reject in the Actions UI."
 
-    - name: "Terraform Plan"
-      working-directory: ${{ env.TF_WORKING_DIR }}
-      run: terraform plan -out=tfplan -lock=false
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: approve
+    env:
+      TF_ENV: ${{ github.event.inputs.environment || 'prod' }}
+      AWS_REGION: ${{ github.event.inputs.region || 'us-east-2' }}
+      TF_DIR: ${{ github.event.inputs.environment || 'prod' }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    steps:
+      - uses: actions/checkout@v3
 
-    - name: "Terraform Apply"
-      if: ${{ (github.event.inputs.action || 'apply') == 'apply' }}
-      working-directory: ${{ env.TF_WORKING_DIR }}
-      run: |
-        set -e
-        terraform destroy -auto-approve -lock=false
+      - uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: "1.5.0"
 
+      - name: Terraform init
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform init -backend-config="key=${{ env.TF_ENV }}/terraform.tfstate"
 
-    - name: "Terraform Destroy"
-      if: ${{ (github.event.inputs.action || 'apply') == 'destroy' }}
-      working-directory: ${{ env.TF_WORKING_DIR }}
-      run: |
-        set -e
-        terraform destroy -auto-approve -lock=false|| echo "Terraform destroy encountered an issue."
-      continue-on-error: true
+      - name: Terraform Apply
+        if: ${{ github.event.inputs.action != 'destroy' }}
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform apply -auto-approve
 
-    - name: "Cleanup Terraform Plan"
-      if: always()
-      working-directory: ${{ env.TF_WORKING_DIR }}
-      run: rm -f tfplan
+      - name: Terraform Destroy
+        if: ${{ github.event.inputs.action == 'destroy' }}
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform destroy -auto-approve
