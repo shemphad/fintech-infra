@@ -31,7 +31,6 @@ jobs:
     env:
       TF_ENV: ${{ github.event.inputs.environment || 'prod' }}
       AWS_REGION: ${{ github.event.inputs.region || 'us-east-2' }}
-      # point directly at the folder name (no leading “./”)
       TF_WORKING_DIR: ${{ github.event.inputs.environment || 'prod' }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -41,11 +40,6 @@ jobs:
       - uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: "1.5.0"
-
-      - name: Show folder contents (for debugging)
-        run: |
-          echo "Working dir: $TF_WORKING_DIR"
-          ls -la ./$TF_WORKING_DIR
 
       - name: Terraform fmt
         working-directory: ${{ env.TF_WORKING_DIR }}
@@ -59,14 +53,19 @@ jobs:
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform plan -out=tfplan -lock=false
 
+      - name: Upload Terraform plan
+        uses: actions/upload-artifact@v3
+        with:
+          name: tfplan-${{ env.TF_ENV }}
+          path: ${{ env.TF_WORKING_DIR }}/tfplan
+
   approve:
     name: Manual Approval
     runs-on: ubuntu-latest
     needs: plan
-    # GitHub will pause here until someone with access to the chosen environment clicks “Approve” or “Reject”
     environment: ${{ github.event.inputs.environment || 'prod' }}
     steps:
-      - run: echo "Waiting for approval in the Actions UI…"
+      - run: echo "Waiting for approval…"
 
   deploy:
     name: Terraform Deploy
@@ -80,6 +79,12 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
     steps:
       - uses: actions/checkout@v3
+
+      - name: Download Terraform plan
+        uses: actions/download-artifact@v3
+        with:
+          name: tfplan-${{ env.TF_ENV }}
+          path: ${{ env.TF_WORKING_DIR }}
 
       - uses: hashicorp/setup-terraform@v2
         with:
