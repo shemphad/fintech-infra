@@ -13,6 +13,11 @@ output "private_subnets" {
   value       = module.vpc.private_subnets
 }
 
+output "public_subnets" {
+  description = "List of IDs of private subnets"
+  value       = module.vpc.public_subnets
+}
+
 output "private_subnet_arns" {
   description = "List of ARNs of private subnets"
   value       = module.vpc.private_subnet_arns

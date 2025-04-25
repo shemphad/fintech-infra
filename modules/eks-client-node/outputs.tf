@@ -3,7 +3,7 @@ output "terraform_node_public_ip" {
 }
 
 output "eks_client_sg" {
-  value = aws_security_group.eks_client_sg.id
+  value = module.eks-client-node.eks_client_sg.id
 }
 
 output "eks_client_instance_profile" {
