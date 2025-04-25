@@ -43,7 +43,7 @@ module "eks-client-node" {
   aws_region             = var.main-region
   subnet_id              = module.vpc.public_subnets[0]
   vpc_id                 = module.vpc.vpc_id
-  vpc_security_group_ids = module.eks-client-node.eks_client_sg
+  vpc_security_group_ids = [module.eks-client-node.eks_client_sg]
   cluster_name           = module.eks.cluster_name
   tags = {
     Name = "eks_client_node"
