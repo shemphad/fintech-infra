@@ -129,23 +129,23 @@ module "iam" {
 # EKS TOOLS
 ##############################################
 module "jenkins-server" {
-  source        = "./../modules/jenkins-server"
-  ami_id        = var.ami_id
-  instance_type = var.client_instance_type
-  key_name      = var.key_name
-  main-region   = var.main-region
+  source            = "./../modules/jenkins-server"
+  ami_id            = var.ami_id
+  instance_type     = var.client_instance_type
+  key_name          = var.key_name
+  main-region       = var.main-region
   security_group_id = [module.eks-client-node.eks_client_sg]
   subnet_id         = module.vpc.public_subnets[0]
 }
 
 
 module "terraform-node" {
-  source        = "./../modules/terraform-node"
-  ami_id        = var.ami_id
-  instance_type = var.instance_type
-  key_name      = var.key_name
-  main-region   = var.main-region
-    security_group_id = [module.eks-client-node.eks_client_sg]
+  source            = "./../modules/terraform-node"
+  ami_id            = var.ami_id
+  instance_type     = var.instance_type
+  key_name          = var.key_name
+  main-region       = var.main-region
+  security_group_id = [module.eks-client-node.eks_client_sg]
   subnet_id         = module.vpc.public_subnets[0]
 }
 
