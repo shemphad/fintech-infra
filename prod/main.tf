@@ -43,7 +43,7 @@ module "aws_alb_controller" {
 module "eks-client-node" {
   source                 = "./../modules/eks-client-node"
   ami_id                 = local.final_ami_id
-  instance_type          = var.client_instance_type
+  instance_type          = var.instance_type
   aws_region             = var.main-region
   subnet_id              = module.vpc.public_subnets[0]
   vpc_id                 = module.vpc.vpc_id
@@ -135,7 +135,7 @@ module "iam" {
 module "jenkins-server" {
   source            = "./../modules/jenkins-server"
   ami_id            = var.ami_id
-  instance_type     = var.client_instance_type
+  instance_type     = var.instance_type
   key_name          = var.key_name
   main-region       = var.main-region
   security_group_id = [module.eks-client-node.eks_client_sg]
@@ -156,7 +156,7 @@ module "terraform-node" {
 module "maven-sonarqube-server" {
   source            = "./../modules/maven-sonarqube-server"
   ami_id            = var.ami_id
-  instance_type     = var.client_instance_type
+  instance_type     = var.instance_type
   key_name          = var.key_name
   security_group_id = [module.eks-client-node.eks_client_sg]
   subnet_id         = module.vpc.public_subnets[0]
