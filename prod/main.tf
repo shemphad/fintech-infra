@@ -134,7 +134,7 @@ module "jenkins-server" {
   instance_type     = var.instance_type
   key_name          = var.key_name
   main-region       = var.main-region
-  security_group_id = [module.eks-client-node.eks_client_sg]
+  security_group_id = module.eks-client-node.eks_client_sg
   subnet_id         = module.vpc.public_subnets[0]
 }
 
@@ -154,7 +154,7 @@ module "maven-sonarqube-server" {
   ami_id            = var.ami_id
   instance_type     = var.instance_type
   key_name          = var.key_name
-  security_group_id = [module.eks-client-node.eks_client_sg]
+  security_group_id = module.eks-client-node.eks_client_sg
   subnet_id         = module.vpc.public_subnets[0]
   # main-region   = var.main-region
 
