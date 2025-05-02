@@ -135,7 +135,7 @@ module "iam" {
 module "jenkins-server" {
   source            = "./../modules/jenkins-server"
   ami_id            = var.ami_id
-  instance_type     = var.client_instance_type
+  instance_type     = var.instance_type
   key_name          = var.key_name
   main-region       = var.main-region
   security_group_id = [module.eks-client-node.eks_client_sg]

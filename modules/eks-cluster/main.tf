@@ -33,6 +33,7 @@ module "eks" {
   vpc_id                   = var.vpc_id
   subnet_ids               = var.private_subnets
   control_plane_subnet_ids = var.private_subnets
+  cluster_additional_security_group_ids = var.security_group_ids
 
   # EKS Managed Node Group(s)
   eks_managed_node_group_defaults = {
