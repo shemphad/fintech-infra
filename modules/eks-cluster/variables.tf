@@ -21,7 +21,7 @@ variable "private_subnets" {
 
 variable "security_group_ids" {
   description = "Addtional Security Groups for EKS control plane"
-  type        = string
+  type        = list(any)
 } 
 ################################################################################
 # Variables defined using Environment Variables
