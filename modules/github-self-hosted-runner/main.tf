@@ -7,6 +7,6 @@ resource "aws_instance" "terraform_node" {
   subnet_id                   = var.subnet_id
 
   tags = {
-    Name = "terraform-node"
+    Name = "self-hosted-runner"
   }
 }

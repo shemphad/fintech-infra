@@ -68,6 +68,7 @@ sudo systemctl start docker
 
 echo "Adding current user ($USER) to the Docker group..."
 sudo usermod -aG docker "$USER"
+newgrp docker
 echo "Docker installation complete."
 
 
