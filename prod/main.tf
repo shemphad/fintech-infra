@@ -148,8 +148,8 @@ module "jenkins-server" {
 }
 
 
-module "terraform-node" {
-  source            = "./../modules/terraform-node"
+module "github-self-hosted-runner" {
+  source            = "./../modules/github-self-hosted-runner"
   ami_id            = local.final_ami_id
   instance_type     = var.instance_type
   key_name          = var.key_name
