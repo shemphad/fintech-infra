@@ -104,7 +104,7 @@ module "eks-client-node" {
   echo "Setup complete. Rebooting..."
   reboot
 EOF
-)
+  )
 
 }
 
