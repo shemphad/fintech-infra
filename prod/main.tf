@@ -96,7 +96,7 @@ module "eks-client-node" {
 
   echo "Installing Amazon SSM Agent via deb package..."
   region=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | grep region | awk -F\" '{print $4}')
-  curl -o /tmp/ssm-agent.deb "https://s3.${region}.amazonaws.com/amazon-ssm-${region}/latest/debian_amd64/amazon-ssm-agent.deb"
+  curl -o /tmp/ssm-agent.deb "https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/debian_amd64/amazon-ssm-agent.deb"
   dpkg -i /tmp/ssm-agent.deb
   systemctl enable amazon-ssm-agent
   systemctl start amazon-ssm-agent
