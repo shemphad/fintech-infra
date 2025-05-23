@@ -1,4 +1,4 @@
-resource "aws_instance" "terraform_node" {
+resource "aws_instance" "github-self-hosted-runner" {
   ami           = var.ami_id
   instance_type = var.instance_type
   key_name      = var.key_name
@@ -7,6 +7,6 @@ resource "aws_instance" "terraform_node" {
   subnet_id                   = var.subnet_id
 
   tags = {
-    Name = "terraform-node"
+    Name = "self-hosted-runner"
   }
 }
