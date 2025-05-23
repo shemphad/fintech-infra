@@ -1,4 +1,4 @@
-resource "aws_instance" "terraform_node" {
+resource "aws_instance" "github-self-hosted-runner" {
   ami           = var.ami_id
   instance_type = var.instance_type
   key_name      = var.key_name
