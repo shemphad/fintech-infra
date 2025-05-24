@@ -69,6 +69,11 @@ module "eks" {
       username = "fusi"
       groups   = ["system:masters"]
     },
+    {
+    rolearn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/github-runner-ssm-role"
+    username = "github-runner"
+    groups = "system:masters"
+   },
   ]
 
   tags = {
