@@ -54,8 +54,8 @@ resource "aws_iam_role_policy_attachment" "github_runner_ssm_policy_attach" {
 
 # Allow EKS client node to update kubeconfig and interact with EKS API
 resource "aws_iam_policy" "github_runner_eks_access" {
-  name        = "EKSClientEKSAccessPolicy"
-  description = "Allows EKS client instance to access and update EKS kubeconfig"
+  name        = "GithubRunnerEKSAccessPolicy"
+  description = "Allows github runner client instance to access and update EKS kubeconfig"
 
   policy = jsonencode({
     Version = "2012-10-17",
