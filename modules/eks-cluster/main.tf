@@ -92,31 +92,31 @@ module "eks" {
 resource "kubernetes_namespace" "gateway" {
   metadata {
     annotations = {
-      name = "gateway"
+      name = "fintech"
     }
 
     labels = {
       app = "webapp"
     }
 
-    name = "gateway"
+    name = "fintech"
   }
 }
 
 
-# resource "kubernetes_namespace" "directory" {
-#   metadata {
-#     annotations = {
-#       name = "directory"
-#     }
+resource "kubernetes_namespace" "directory" {
+  metadata {
+    annotations = {
+      name = "directory"
+    }
 
-#     labels = {
-#       app = "webapp"
-#     }
+    labels = {
+      app = "webapp"
+    }
 
-#     name = "directory"
-#   }
-# }
+    name = "directory"
+  }
+}
 
 
 

@@ -93,6 +93,10 @@ echo "export PATH=\$M2_HOME/bin:\$PATH" | sudo tee -a /etc/profile.d/maven.sh
 # Apply env vars immediately
 source /etc/profile.d/maven.sh
 
+#Install kustomize 
+curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+sudo mv kustomize /usr/local/bin/
+
 
 
 
