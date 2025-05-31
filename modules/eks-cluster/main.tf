@@ -107,30 +107,31 @@ resource "kubernetes_namespace" "gateway" {
 resource "kubernetes_namespace" "directory" {
   metadata {
     annotations = {
-      name = "directory"
+      name = "monitoring"
     }
 
     labels = {
-      app = "webapp"
+      app = "monitoring"
     }
 
-    name = "directory"
+    name = "monitoring"
   }
 }
 
 
 
-# resource "kubernetes_namespace" "analytics" {
-#   metadata {
-#     annotations = {
-#       name = "analytics"
-#     }
 
-#     labels = {
-#       app = "webapp"
-#     }
+resource "kubernetes_namespace" "analytics" {
+  metadata {
+    annotations = {
+      name = "fintech-dev"
+    }
 
-#     name = "analytics"
-#   }
-# }
+    labels = {
+      app = "fintech-dev"
+    }
+
+    name = "fintech-dev"
+  }
+}
 
