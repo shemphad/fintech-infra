@@ -36,77 +36,77 @@ module "aws_alb_controller" {
 }
 
 
-# module "eks-client-node" {
-#   source                 = "./../modules/eks-client-node"
-#   ami_id                 = local.final_ami_id
-#   instance_type          = var.instance_type
-#   aws_region             = var.main-region
-#   subnet_id              = module.vpc.public_subnets[0]
-#   vpc_id                 = module.vpc.vpc_id
-#   vpc_security_group_ids = [module.eks-client-node.eks_client_sg]
-#   cluster_name           = module.eks.cluster_name
-#   tags = {
-#     Name = "eks_client_node"
-#   }
-#   key_name = module.eks-client-node.eks_client_private_key
-#   user_data = base64encode(<<-EOF
-#   #!/bin/bash
-#   exec > >(tee /var/log/user-data.log | logger -t user-data -s 2>/dev/console) 2>&1
-#   set -xe
+module "eks-client-node" {
+  source                 = "./../modules/eks-client-node"
+  ami_id                 = local.final_ami_id
+  instance_type          = var.instance_type
+  aws_region             = var.main-region
+  subnet_id              = module.vpc.public_subnets[0]
+  vpc_id                 = module.vpc.vpc_id
+  vpc_security_group_ids = [module.eks-client-node.eks_client_sg]
+  cluster_name           = module.eks.cluster_name
+  tags = {
+    Name = "eks_client_node"
+  }
+  key_name = module.eks-client-node.eks_client_private_key
+  user_data = base64encode(<<-EOF
+  #!/bin/bash
+  exec > >(tee /var/log/user-data.log | logger -t user-data -s 2>/dev/console) 2>&1
+  set -xe
 
-#   echo "Waiting for cloud-init to settle..."
-#   sleep 15
+  echo "Waiting for cloud-init to settle..."
+  sleep 15
 
-#   echo "Updating system and installing prerequisites..."
-#   apt-get update -y
-#   DEBIAN_FRONTEND=noninteractive apt-get install -y \
-#     unzip gnupg curl lsb-release software-properties-common \
-#     apt-transport-https ca-certificates
+  echo "Updating system and installing prerequisites..."
+  apt-get update -y
+  DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    unzip gnupg curl lsb-release software-properties-common \
+    apt-transport-https ca-certificates
 
-#   echo "Installing AWS CLI v2..."
-#   curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-#   unzip -o awscliv2.zip
-#   ./aws/install
+  echo "Installing AWS CLI v2..."
+  curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+  unzip -o awscliv2.zip
+  ./aws/install
 
-#   echo "Installing Terraform..."
-#   curl -fsSL https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp.gpg
-#   echo "deb [signed-by=/usr/share/keyrings/hashicorp.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" > /etc/apt/sources.list.d/hashicorp.list
-#   apt-get update -y
-#   apt-get install -y terraform
+  echo "Installing Terraform..."
+  curl -fsSL https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp.gpg
+  echo "deb [signed-by=/usr/share/keyrings/hashicorp.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" > /etc/apt/sources.list.d/hashicorp.list
+  apt-get update -y
+  apt-get install -y terraform
 
-#   echo "Installing kubectl..."
-#   curl -LO https://s3.us-west-2.amazonaws.com/amazon-eks/1.31.3/2024-12-12/bin/linux/amd64/kubectl
-#   install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+  echo "Installing kubectl..."
+  curl -LO https://s3.us-west-2.amazonaws.com/amazon-eks/1.31.3/2024-12-12/bin/linux/amd64/kubectl
+  install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 
-#   echo "Installing Docker CE..."
-#   apt-get remove -y docker docker-engine docker.io containerd runc || true
-#   curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker.gpg
-#   echo \
-#     "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-#     $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
-#   apt-get update -y
-#   apt-get install -y docker-ce docker-ce-cli containerd.io
+  echo "Installing Docker CE..."
+  apt-get remove -y docker docker-engine docker.io containerd runc || true
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker.gpg
+  echo \
+    "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+    $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
+  apt-get update -y
+  apt-get install -y docker-ce docker-ce-cli containerd.io
 
-#   echo "Enabling and starting Docker..."
-#   systemctl enable docker
-#   systemctl start docker
+  echo "Enabling and starting Docker..."
+  systemctl enable docker
+  systemctl start docker
 
-#   echo "Adding 'ubuntu' user to 'docker' group..."
-#   usermod -aG docker ubuntu
+  echo "Adding 'ubuntu' user to 'docker' group..."
+  usermod -aG docker ubuntu
 
-#   echo "Installing Amazon SSM Agent via deb package..."
-#   region=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | grep region | awk -F\" '{print $4}')
-#   curl -o /tmp/ssm-agent.deb "https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/debian_amd64/amazon-ssm-agent.deb"
-#   dpkg -i /tmp/ssm-agent.deb
-#   systemctl enable amazon-ssm-agent
-#   systemctl start amazon-ssm-agent
+  echo "Installing Amazon SSM Agent via deb package..."
+  region=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | grep region | awk -F\" '{print $4}')
+  curl -o /tmp/ssm-agent.deb "https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/debian_amd64/amazon-ssm-agent.deb"
+  dpkg -i /tmp/ssm-agent.deb
+  systemctl enable amazon-ssm-agent
+  systemctl start amazon-ssm-agent
 
-#   echo "Setup complete. Rebooting..."
-#   reboot
-# EOF
-#   )
+  echo "Setup complete. Rebooting..."
+  reboot
+EOF
+  )
 
-# }
+}
 
 
 
