@@ -1,3 +1,8 @@
+#############################
+# Fetch AWS Account ID
+#############################
+data "aws_caller_identity" "current" {}
+
 ################################################################################
 # EKS Cluster
 ################################################################################
@@ -69,6 +74,12 @@ module "eks" {
       username = "fusi"
       groups   = ["system:masters"]
     },
+    {
+      rolearn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/github-runner-ssm-role"
+      username = "github-runner"
+      groups   = ["system:masters"]
+    }
+
   ]
 
   tags = {
@@ -81,45 +92,46 @@ module "eks" {
 resource "kubernetes_namespace" "gateway" {
   metadata {
     annotations = {
-      name = "gateway"
+      name = "fintech"
     }
 
     labels = {
       app = "webapp"
     }
 
-    name = "gateway"
+    name = "fintech"
   }
 }
 
 
-# resource "kubernetes_namespace" "directory" {
-#   metadata {
-#     annotations = {
-#       name = "directory"
-#     }
+resource "kubernetes_namespace" "directory" {
+  metadata {
+    annotations = {
+      name = "monitoring"
+    }
 
-#     labels = {
-#       app = "webapp"
-#     }
+    labels = {
+      app = "monitoring"
+    }
 
-#     name = "directory"
-#   }
-# }
+    name = "monitoring"
+  }
+}
 
 
 
-# resource "kubernetes_namespace" "analytics" {
-#   metadata {
-#     annotations = {
-#       name = "analytics"
-#     }
 
-#     labels = {
-#       app = "webapp"
-#     }
+resource "kubernetes_namespace" "analytics" {
+  metadata {
+    annotations = {
+      name = "fintech-dev"
+    }
 
-#     name = "analytics"
-#   }
-# }
+    labels = {
+      app = "fintech-dev"
+    }
+
+    name = "fintech-dev"
+  }
+}
 

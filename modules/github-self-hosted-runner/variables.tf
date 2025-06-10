@@ -21,3 +21,26 @@ variable "main-region" {
   type        = string
   default     = "us-west-2"
 }
+
+variable "security_group_id" {
+  description = "The security group ID to attach to the instance"
+  type        = string
+}
+
+variable "subnet_id" {
+  description = "The subnet ID where the instance will be deployed"
+  type        = string
+}
+
+variable "cluster_name" {
+  description = "Name of the EKS cluster"
+  type        = string
+}
+
+variable "aws_region" {
+  description = "The AWS region to deploy resources"
+  type        = string
+  default     = "us-east-2"
+}
+
+

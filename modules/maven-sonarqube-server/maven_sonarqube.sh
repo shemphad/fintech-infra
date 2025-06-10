@@ -42,7 +42,12 @@ source /etc/profile.d/maven.sh
 echo "Verifying Maven:"
 mvn -version
 
-### 4) SonarQube 10.5.1 setup
+### 4.) Adding max map count for elasticsearch 
+sudo sysctl -w vm.max_map_count=262144
+echo 'vm.max_map_count=262144' | sudo tee -a /etc/sysctl.conf
+sudo sysctl -p
+
+### 5) SonarQube 10.5.1 setup
 SONARQUBE_VERSION=10.5.1.90531
 echo "Downloading SonarQube ${SONARQUBE_VERSION}..."
 wget -q "https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-${SONARQUBE_VERSION}.zip"
@@ -56,7 +61,7 @@ sudo useradd --system --gid ddsonar --home /opt/sonarqube --shell /bin/false dds
 sudo chown -R ddsonar:ddsonar /opt/sonarqube
 sudo chmod +x /opt/sonarqube/bin/linux-x86-64/sonar.sh
 
-### 5) PostgreSQL installation & DB setup
+### 6) PostgreSQL installation & DB setup
 echo "Installing PostgreSQL..."
 sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" \
   > /etc/apt/sources.list.d/pgdg.list'
@@ -71,7 +76,7 @@ CREATE DATABASE ddsonarqube OWNER ddsonar;
 GRANT ALL PRIVILEGES ON DATABASE ddsonarqube TO ddsonar;
 EOF
 
-### 6) Configure SonarQube to use PostgreSQL
+### 7) Configure SonarQube to use PostgreSQL
 echo "Writing sonar.properties..."
 sudo tee /opt/sonarqube/conf/sonar.properties > /dev/null <<'EOF'
 sonar.jdbc.username=ddsonar
@@ -79,7 +84,7 @@ sonar.jdbc.password=Team@123
 sonar.jdbc.url=jdbc:postgresql://localhost:5432/ddsonarqube
 EOF
 
-### 7) Systemd service for SonarQube
+### 8) Systemd service for SonarQube
 echo "Creating systemd unit for SonarQube..."
 sudo tee /etc/systemd/system/sonar.service > /dev/null <<'EOF'
 [Unit]
@@ -104,7 +109,7 @@ sudo systemctl daemon-reload
 sudo systemctl enable sonar.service
 sudo systemctl start sonar.service
 
-### 8) Nginx & Let's Encrypt SSL
+### 9) Nginx & Let's Encrypt SSL
 echo "Installing Nginx & Certbot..."
 sudo apt-get install -y nginx certbot python3-certbot-nginx
 sudo ufw allow 'Nginx Full'
@@ -144,3 +149,5 @@ sudo bash -c 'echo "0 0 * * * root certbot renew --quiet" >> /etc/crontab'
 sudo systemctl reload nginx
 
 echo "✅ Setup complete! Access SonarQube at: https://sonarqube.dominionsystem.org"
+
+

@@ -12,12 +12,12 @@ module "vpc" {
 # ################################################################################
 
 module "eks" {
-  source       = "./../modules/eks-cluster"
-  cluster_name = var.cluster_name
-  rolearn      = var.rolearn
-
-  vpc_id          = module.vpc.vpc_id
-  private_subnets = module.vpc.private_subnets
+  source             = "./../modules/eks-cluster"
+  cluster_name       = var.cluster_name
+  rolearn            = var.rolearn
+  security_group_ids = [module.eks-client-node.eks_client_sg]
+  vpc_id             = module.vpc.vpc_id
+  private_subnets    = module.vpc.private_subnets
 }
 
 # ################################################################################
@@ -39,9 +39,9 @@ module "aws_alb_controller" {
 module "eks-client-node" {
   source                 = "./../modules/eks-client-node"
   ami_id                 = local.final_ami_id
-  instance_type          = var.client_instance_type
+  instance_type          = var.instance_type
   aws_region             = var.main-region
-  subnet_id              = module.vpc.public_subnet_ids[0]
+  subnet_id              = module.vpc.public_subnets[0]
   vpc_id                 = module.vpc.vpc_id
   vpc_security_group_ids = [module.eks-client-node.eks_client_sg]
   cluster_name           = module.eks.cluster_name
@@ -123,6 +123,50 @@ module "iam" {
   environment = var.env_name
   tags        = local.common_tags
 }
+
+
+##############################################
+# EKS TOOLS
+##############################################
+module "jenkins-server" {
+  source            = "./../modules/jenkins-server"
+  ami_id            = local.final_ami_id
+  instance_type     = var.instance_type
+  key_name          = var.key_name
+  main-region       = var.main-region
+  security_group_id = module.eks-client-node.eks_client_sg
+  subnet_id         = module.vpc.public_subnets[0]
+}
+
+
+module "terraform-node" {
+  source            = "./../modules/terraform-node"
+  ami_id            = local.final_ami_id
+  instance_type     = var.instance_type
+  key_name          = var.key_name
+  main-region       = var.main-region
+  security_group_id = module.eks-client-node.eks_client_sg
+  subnet_id         = module.vpc.public_subnets[0]
+}
+
+module "maven-sonarqube-server" {
+  source            = "./../modules/maven-sonarqube-server"
+  ami_id            = local.final_ami_id
+  instance_type     = var.instance_type
+  key_name          = var.key_name
+  security_group_id = module.eks-client-node.eks_client_sg
+  subnet_id         = module.vpc.public_subnets[0]
+  # main-region   = var.main-region
+
+  #   db_name              = var.db_name
+  #   db_username          = var.db_username
+  #   db_password          = var.db_password
+  #   db_subnet_group      = var.db_subnet_group
+  #   db_security_group_id = var.db_security_group_id
+}
+
+
+
 
 
 # ################################################################################
