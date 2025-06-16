@@ -98,4 +98,16 @@ jobs:
       - name: Terraform Destroy
         if: ${{ github.event.inputs.action == 'destroy' }}
         working-directory: ${{ env.TF_DIR }}
-        run: terraform destroy -auto-approve -lock=false
+        env:
+          TF_LOG: DEBUG
+          AWS_METADATA_SERVICE_TIMEOUT: 10
+          AWS_METADATA_SERVICE_NUM_ATTEMPTS: 5
+          AWS_RETRY_MODE: standard
+          AWS_MAX_ATTEMPTS: 10
+        run: |
+          echo "⚠️ Starting Terraform Destroy"
+          terraform destroy -auto-approve -lock=false || {
+            echo "❌ Terraform destroy failed. Retrying in 15 seconds..."
+            sleep 15
+            terraform destroy -auto-approve -lock=false
+          }
