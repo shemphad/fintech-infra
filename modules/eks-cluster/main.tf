@@ -64,69 +64,56 @@ data "aws_region" "current" {}
 #       capacity_type  = "SPOT"
 #     }
 #   }
-#########################################
-# EKS v1.31
-#########################################
-module   "eks" {
+
+################################################################################
+# EKS Cluster (v1.31 using Module v20)
+################################################################################
+
+module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 20.0"
 
   cluster_name    = var.cluster_name
   cluster_version = "1.31"
 
-  bootstrap_self_managed_addons = false
-  cluster_addons = {
-    coredns                = {
-      most_recent = true
-    }
-    eks-pod-identity-agent = {
-      most_recent = true
-    }
-    kube-proxy             = {
-      most_recent = true
-    }
-    vpc-cni                = {
-      most_recent = true
-    }
-  }
-
-  # Optional
-  cluster_endpoint_public_access = true
-
-  # Optional: Adds the current caller identity as an administrator via cluster access entry
   enable_cluster_creator_admin_permissions = true
+  bootstrap_self_managed_addons           = false
+  cluster_endpoint_public_access          = true
 
   vpc_id                   = var.vpc_id
   subnet_ids               = var.private_subnets
   control_plane_subnet_ids = var.private_subnets
   cluster_additional_security_group_ids = var.security_group_ids
 
-  # EKS Managed Node Group(s)
+  cluster_addons = {
+    coredns = {
+      most_recent = true
+    }
+    kube-proxy = {
+      most_recent = true
+    }
+    vpc-cni = {
+      most_recent = true
+    }
+    eks-pod-identity-agent = {
+      most_recent = true
+    }
+  }
+
   eks_managed_node_group_defaults = {
     instance_types = ["m6i.large", "m5.large", "m5n.large", "m5zn.large"]
   }
 
   eks_managed_node_groups = {
-    example = {
-      # Starting on 1.30, AL2023 is the default AMI type for EKS managed node groups
+    default = {
       ami_type       = "AL2023_x86_64_STANDARD"
       instance_types = ["m5.xlarge"]
-
-      min_size     = 2
-      max_size     = 10
-      desired_size = 2
+      min_size       = 2
+      max_size       = 10
+      desired_size   = 2
     }
   }
 
-  # tags = {
-  #   Environment = "dev"
-  #   Terraform   = "true"
-  # }
-
-
-#########################################
-# configmap
-#########################################
   # manage_aws_auth_configmap = true
 
   # aws_auth_roles = [
@@ -141,12 +128,12 @@ module   "eks" {
   #     groups   = ["system:masters"]
   #   }
   # ]
+
   tags = {
     env       = "dev"
     terraform = "true"
   }
 }
-
 
 ################################################################################
 # Kubernetes Namespaces
@@ -176,7 +163,7 @@ resource "kubernetes_namespace" "monitoring" {
   }
 }
 
-resource "kubernetes_namespace" "fintech-dev" {
+resource "kubernetes_namespace" "fintech_dev" {
   metadata {
     name = "fintech-dev"
     annotations = {
