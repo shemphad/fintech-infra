@@ -55,7 +55,7 @@ jobs:
 
       - name: Terraform init
         working-directory: ${{ env.TF_DIR }}
-        run: terraform init -backend-config="key=${{ env.TF_ENV }}/terraform.tfstate"
+        run: terraform init -upgrade -backend-config="key=${{ env.TF_ENV }}/terraform.tfstate"
 
       - name: Terraform plan
         working-directory: ${{ env.TF_DIR }}
