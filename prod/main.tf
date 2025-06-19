@@ -4,7 +4,7 @@
 
 module "vpc" {
   source      = "./../modules/vpc"
-  main-region = var.main-region
+  main_region = var.main_region
 }
 
 # ################################################################################
@@ -27,7 +27,7 @@ module "eks" {
 module "aws_alb_controller" {
   source = "./../modules/aws-alb-controller"
 
-  main-region  = var.main-region
+  main_region  = var.main_region
   env_name     = var.env_name
   cluster_name = var.cluster_name
 
@@ -40,7 +40,7 @@ module "eks-client-node" {
   source                 = "./../modules/eks-client-node"
   ami_id                 = local.final_ami_id
   instance_type          = var.instance_type
-  aws_region             = var.main-region
+  aws_region             = var.main_region
   subnet_id              = module.vpc.public_subnets[0]
   vpc_id                 = module.vpc.vpc_id
   vpc_security_group_ids = [module.eks-client-node.eks_client_sg]
@@ -142,7 +142,7 @@ module "iam" {
 #   ami_id            = local.final_ami_id
 #   instance_type     = var.instance_type
 #   key_name          = var.key_name
-#   main-region       = var.main-region
+#   main_region       = var.main_region
 #   security_group_id = module.eks-client-node.eks_client_sg
 #   subnet_id         = module.vpc.public_subnets[0]
 # }
@@ -153,7 +153,7 @@ module "github-self-hosted-runner" {
   ami_id            = local.final_ami_id
   instance_type     = var.instance_type
   key_name          = var.key_name
-  main-region       = var.main-region
+  main_region       = var.main_region
   security_group_id = module.eks-client-node.eks_client_sg
   subnet_id         = module.vpc.public_subnets[0]
   cluster_name      = module.eks.cluster_name
@@ -166,7 +166,7 @@ module "maven-sonarqube-server" {
   key_name          = var.key_name
   security_group_id = module.eks-client-node.eks_client_sg
   subnet_id         = module.vpc.public_subnets[0]
-  # main-region   = var.main-region
+  # main_region   = var.main_region
 
   #   db_name              = var.db_name
   #   db_username          = var.db_username
@@ -186,7 +186,7 @@ module "maven-sonarqube-server" {
 # module "managed_grafana" {
 #   source             = "./modules/grafana"
 #   env_name           = var.env_name
-#   main-region        = var.main-region
+#   main_region        = var.main_region
 #   private_subnets    = module.vpc.private_subnets
 #   sso_admin_group_id = var.sso_admin_group_id
 # }
@@ -200,7 +200,7 @@ module "maven-sonarqube-server" {
 # module "prometheus" {
 #   source            = "./modules/prometheus"
 #   env_name          = var.env_name
-#   main-region       = var.main-region
+#   main_region       = var.main_region
 #   cluster_name      = var.cluster_name
 #   oidc_provider_arn = module.eks.oidc_provider_arn
 #   vpc_id            = module.vpc.vpc_id
@@ -216,7 +216,7 @@ module "maven-sonarqube-server" {
 # module "vpcendpoints" {
 #   source                    = "./modules/vpcendpoints"
 #   env_name                  = var.env_name
-#   main-region               = var.main-region
+#   main_region               = var.main_region
 #   vpc_id                    = module.vpc.vpc_id
 #   private_subnets           = module.vpc.private_subnets
 #   grafana_security_group_id = module.managed_grafana.security_group_id

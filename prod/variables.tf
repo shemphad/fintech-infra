@@ -3,7 +3,7 @@
 # # Default Variables
 # ################################################################################
 
-variable "main-region" {
+variable "main_region" {
   type    = string
   default = "us-east-2"
 }
