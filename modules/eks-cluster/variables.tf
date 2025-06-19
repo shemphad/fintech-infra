@@ -38,3 +38,17 @@ variable "cni_role_arn" {
   type        = string
 }
 
+variable "tags" {
+  description = "Common tags for the cluster resources"
+  type        = map(string)
+  default = {
+    product   = "eks-cluster"
+    ManagedBy = "terraform"
+    project = "fintech"
+  }
+}
+
+variable "env_name" {
+  type    = string
+}
+

@@ -19,6 +19,8 @@ module "eks" {
   security_group_ids = [module.eks-client-node.eks_client_sg]
   vpc_id             = module.vpc.vpc_id
   private_subnets    = module.vpc.private_subnets
+  tags = local.common_tags
+  env_name = var.env_name
 }
 
 

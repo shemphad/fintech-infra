@@ -1,73 +1,3 @@
-#############################
-# Fetch AWS Account ID and Region
-#############################
-
-data "aws_caller_identity" "current" {}
-data "aws_region" "current" {}
-
-################################################################################
-# EKS Cluster
-################################################################################
-
-# module "eks" {
-#   source  = "terraform-aws-modules/eks/aws"
-#   version = "~> 19.0"
-
-#   cluster_name    = var.cluster_name
-#   cluster_version = "1.30"
-
-#   cluster_endpoint_public_access = true
-
-#   create_kms_key              = false
-#   create_cloudwatch_log_group = false
-#   cluster_encryption_config   = {}
-
-#   cluster_addons = {
-#     coredns = {
-#       most_recent = true
-#     }
-#     kube-proxy = {
-#       most_recent = true
-#     }
-#     vpc-cni = {
-#       most_recent = true
-#     }
-#     aws-ebs-csi-driver = {
-#       most_recent = true
-#     }
-#   }
-
-#   vpc_id                   = var.vpc_id
-#   subnet_ids               = var.private_subnets
-#   control_plane_subnet_ids = var.private_subnets
-#   cluster_additional_security_group_ids = var.security_group_ids
-
-#   eks_managed_node_group_defaults = {
-#     instance_types = ["m5.xlarge", "m5.large", "t3.medium"]
-#     iam_role_additional_policies = {
-#       AmazonEBSCSIDriverPolicy = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
-#     }
-#   }
-
-#   eks_managed_node_groups = {
-#     node-group-01 = {
-#       min_size     = 1
-#       max_size     = 10
-#       desired_size = 1
-#     },
-#     node-group-02 = {
-#       min_size     = 1
-#       max_size     = 10
-#       desired_size = 1
-
-#       instance_types = ["t3.large"]
-#       capacity_type  = "SPOT"
-#     }
-#   }
-
-################################################################################
-# EKS Cluster (v1.31 using Module v20)
-################################################################################
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 20.0"
@@ -96,7 +26,7 @@ module "eks" {
     }
     vpc-cni = {
       most_recent              = true
-      service_account_role_arn = var.cni_role_arn
+      service_account_role_arn = var.cni_role_arn  # ✅ CNI role passed here
     }
     eks-pod-identity-agent = {
       most_recent = true
@@ -120,30 +50,35 @@ module "eks" {
     }
   }
 
- # manage_aws_auth_configmap = true
-
   access_entries = {
     fusi = {
       kubernetes_groups = ["system:masters"]
       principal_arn     = var.rolearn
-      policy_associations = {
-        admin = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-      }
+      policy_associations = [
+        {
+          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+          access_scope = {
+            type = "cluster"
+          }
+        }
+      ]
     }
 
     github_runner = {
       kubernetes_groups = ["system:masters"]
       principal_arn     = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/github-runner-ssm-role"
-      policy_associations = {
-        admin = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-      }
+      policy_associations = [
+        {
+          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+          access_scope = {
+            type = "cluster"
+          }
+        }
+      ]
     }
   }
 
-  tags = {
-    env       = "dev"
-    terraform = "true"
-  }
+  tags = locals.common_tags
 }
 
 
