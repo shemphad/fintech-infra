@@ -104,7 +104,7 @@ module "eks" {
       desired_size   = 1
     }
   }
-
+  }
   # manage_aws_auth_configmap = true
 
   # aws_auth_roles = [
