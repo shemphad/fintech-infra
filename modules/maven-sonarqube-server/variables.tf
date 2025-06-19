@@ -19,7 +19,7 @@ variable "key_name" {
   default     = "DevOps_Train2024"
 }
 
-variable "main-region" {
+variable "main_region" {
   description = "The AWS region to deploy resources"
   type        = string
   default     = "us-west-2"
