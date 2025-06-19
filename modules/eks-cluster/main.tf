@@ -107,7 +107,7 @@ module "eks" {
     default = {
       ami_type       = "AL2023_x86_64_STANDARD"
       instance_types = ["m5.xlarge"]
-      min_size       = 2
+      min_size       = 1
       max_size       = 10
       desired_size   = 1
     }
