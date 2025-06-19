@@ -68,7 +68,6 @@ data "aws_region" "current" {}
 ################################################################################
 # EKS Cluster (v1.31 using Module v20)
 ################################################################################
-
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 20.0"
@@ -86,10 +85,19 @@ module "eks" {
   cluster_additional_security_group_ids = var.security_group_ids
 
   cluster_addons = {
-    coredns = {}
-    kube-proxy = {}
-    vpc-cni = {}
-    eks-pod-identity-agent = {}
+    coredns = {
+      most_recent = true
+    }
+    kube-proxy = {
+      most_recent = true
+    }
+    vpc-cni = {
+      most_recent = true
+    }
+    eks-pod-identity-agent = {
+      most_recent = true
+    }
+  }
 
   eks_managed_node_group_defaults = {
     instance_types = ["m6i.large", "m5.large", "m5n.large", "m5zn.large"]
@@ -104,7 +112,7 @@ module "eks" {
       desired_size   = 1
     }
   }
-  }
+
   # manage_aws_auth_configmap = true
 
   # aws_auth_roles = [
@@ -125,6 +133,7 @@ module "eks" {
     terraform = "true"
   }
 }
+
 
 ################################################################################
 # Kubernetes Namespaces
