@@ -7,11 +7,11 @@ module "eks" {
 
   enable_cluster_creator_admin_permissions = true
   cluster_endpoint_public_access           = true
-  bootstrap_self_managed_addons           = false
+  bootstrap_self_managed_addons            = false
 
-  vpc_id                   = var.vpc_id
-  subnet_ids               = var.private_subnets
-  control_plane_subnet_ids = var.private_subnets
+  vpc_id                                = var.vpc_id
+  subnet_ids                            = var.private_subnets
+  control_plane_subnet_ids              = var.private_subnets
   cluster_additional_security_group_ids = var.security_group_ids
 
   create_cloudwatch_log_group = true
@@ -26,7 +26,7 @@ module "eks" {
     }
     vpc-cni = {
       most_recent              = true
-      service_account_role_arn = var.cni_role_arn  # ✅ CNI role passed here
+      service_account_role_arn = var.cni_role_arn # ✅ CNI role passed here
     }
     eks-pod-identity-agent = {
       most_recent = true
