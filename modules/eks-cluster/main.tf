@@ -1,3 +1,4 @@
+data "aws_caller_identity" "current" {}
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 20.0"
@@ -26,7 +27,7 @@ module "eks" {
     }
     vpc-cni = {
       most_recent              = true
-      service_account_role_arn = var.cni_role_arn # ✅ CNI role passed here
+      service_account_role_arn = var.cni_role_arn
     }
     eks-pod-identity-agent = {
       most_recent = true
@@ -78,9 +79,8 @@ module "eks" {
     }
   }
 
-  tags = locals.common_tags
+  tags = local.common_tags
 }
-
 
 ################################################################################
 # Kubernetes Namespaces
