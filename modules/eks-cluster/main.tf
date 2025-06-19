@@ -76,13 +76,16 @@ module "eks" {
   cluster_version = "1.31"
 
   enable_cluster_creator_admin_permissions = true
+  cluster_endpoint_public_access           = true
   bootstrap_self_managed_addons           = false
-  cluster_endpoint_public_access          = true
 
   vpc_id                   = var.vpc_id
   subnet_ids               = var.private_subnets
   control_plane_subnet_ids = var.private_subnets
   cluster_additional_security_group_ids = var.security_group_ids
+
+  create_cloudwatch_log_group = true
+  cluster_enabled_log_types   = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
 
   cluster_addons = {
     coredns = {
@@ -92,7 +95,8 @@ module "eks" {
       most_recent = true
     }
     vpc-cni = {
-      most_recent = true
+      most_recent              = true
+      service_account_role_arn = var.cni_role_arn
     }
     eks-pod-identity-agent = {
       most_recent = true
@@ -101,6 +105,9 @@ module "eks" {
 
   eks_managed_node_group_defaults = {
     instance_types = ["m6i.large", "m5.large", "m5n.large", "m5zn.large"]
+    iam_role_additional_policies = {
+      AmazonEKS_CNI_Policy = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+    }
   }
 
   eks_managed_node_groups = {
@@ -113,20 +120,25 @@ module "eks" {
     }
   }
 
-  # manage_aws_auth_configmap = true
+ # manage_aws_auth_configmap = true
 
-  # aws_auth_roles = [
-  #   {
-  #     rolearn  = var.rolearn
-  #     username = "fusi"
-  #     groups   = ["system:masters"]
-  #   },
-  #   {
-  #     rolearn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/github-runner-ssm-role"
-  #     username = "github-runner"
-  #     groups   = ["system:masters"]
-  #   }
-  # ]
+  access_entries = {
+    fusi = {
+      kubernetes_groups = ["system:masters"]
+      principal_arn     = var.rolearn
+      policy_associations = {
+        admin = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+      }
+    }
+
+    github_runner = {
+      kubernetes_groups = ["system:masters"]
+      principal_arn     = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/github-runner-ssm-role"
+      policy_associations = {
+        admin = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+      }
+    }
+  }
 
   tags = {
     env       = "dev"
@@ -146,7 +158,7 @@ resource "kubernetes_namespace" "fintech" {
       name = "fintech"
     }
     labels = {
-      app = "webapp"
+      app = "fintech"
     }
   }
 }
