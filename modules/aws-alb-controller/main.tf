@@ -1,5 +1,5 @@
 ################################################################################
-# Load Balancer Role
+# Load Balancer IAM Role for Service Account
 ################################################################################
 
 module "lb_role" {
@@ -17,10 +17,10 @@ module "lb_role" {
 }
 
 ################################################################################
-# Aws Load balancer Controller Service Account
+# Kubernetes Service Account for ALB Controller
 ################################################################################
 
-resource "kubernetes_service_account" "service-account" {
+resource "kubernetes_service_account" "service_account" {
   metadata {
     name      = "aws-load-balancer-controller"
     namespace = "kube-system"
@@ -36,7 +36,7 @@ resource "kubernetes_service_account" "service-account" {
 }
 
 ################################################################################
-# Install Load Balancer Controler With Helm
+# Helm Release: AWS Load Balancer Controller
 ################################################################################
 
 resource "helm_release" "lb" {
@@ -44,13 +44,14 @@ resource "helm_release" "lb" {
   repository = "https://aws.github.io/eks-charts"
   chart      = "aws-load-balancer-controller"
   namespace  = "kube-system"
+
   depends_on = [
-    kubernetes_service_account.service-account
+    kubernetes_service_account.service_account
   ]
 
   set {
     name  = "region"
-    value = var.main-region
+    value = var.main_region
   }
 
   set {
@@ -60,7 +61,7 @@ resource "helm_release" "lb" {
 
   set {
     name  = "image.repository"
-    value = "602401143452.dkr.ecr.${var.main-region}.amazonaws.com/amazon/aws-load-balancer-controller"
+    value = "602401143452.dkr.ecr.${var.main_region}.amazonaws.com/amazon/aws-load-balancer-controller"
   }
 
   set {
@@ -78,4 +79,3 @@ resource "helm_release" "lb" {
     value = var.cluster_name
   }
 }
-
