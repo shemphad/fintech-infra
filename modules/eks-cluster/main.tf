@@ -86,19 +86,10 @@ module "eks" {
   cluster_additional_security_group_ids = var.security_group_ids
 
   cluster_addons = {
-    coredns = {
-      most_recent = true
-    }
-    kube-proxy = {
-      most_recent = true
-    }
-    vpc-cni = {
-      most_recent = true
-    }
-    eks-pod-identity-agent = {
-      most_recent = true
-    }
-  }
+    coredns = {}
+    kube-proxy = {}
+    vpc-cni = {}
+    eks-pod-identity-agent = {}
 
   eks_managed_node_group_defaults = {
     instance_types = ["m6i.large", "m5.large", "m5n.large", "m5zn.large"]
@@ -110,7 +101,7 @@ module "eks" {
       instance_types = ["m5.xlarge"]
       min_size       = 2
       max_size       = 10
-      desired_size   = 2
+      desired_size   = 1
     }
   }
 
