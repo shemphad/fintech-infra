@@ -24,11 +24,7 @@ variable "rolearn" {
 
 }
 
-variable "cni_role_arn" {
-  description = "IAM role ARN used by the CNI plugin"
-  type        = string
-  default = "arn:aws:iam::999568710647:role/eks-cni-role"
-}
+
 
 # ################################################################################
 # # ALB Controller Variables
