@@ -1,7 +1,9 @@
 #############################
-# Fetch AWS Account ID
+# Fetch AWS Account ID and Region
 #############################
+
 data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
 
 ################################################################################
 # EKS Cluster
@@ -40,7 +42,6 @@ module "eks" {
   control_plane_subnet_ids = var.private_subnets
   cluster_additional_security_group_ids = var.security_group_ids
 
-  # EKS Managed Node Group(s)
   eks_managed_node_group_defaults = {
     instance_types = ["m5.xlarge", "m5.large", "t3.medium"]
     iam_role_additional_policies = {
@@ -53,7 +54,7 @@ module "eks" {
       min_size     = 1
       max_size     = 10
       desired_size = 1
-    }
+    },
     node-group-02 = {
       min_size     = 1
       max_size     = 10
@@ -64,9 +65,7 @@ module "eks" {
     }
   }
 
-  # aws-auth configmap
   manage_aws_auth_configmap = true
-  #create_aws_auth_configmap = true
 
   aws_auth_roles = [
     {
@@ -79,7 +78,6 @@ module "eks" {
       username = "github-runner"
       groups   = ["system:masters"]
     }
-
   ]
 
   tags = {
@@ -88,49 +86,42 @@ module "eks" {
   }
 }
 
-#creating namespaces
-resource "kubernetes_namespace" "gateway" {
+################################################################################
+# Kubernetes Namespaces
+################################################################################
+
+resource "kubernetes_namespace" "fintech" {
   metadata {
+    name = "fintech"
     annotations = {
       name = "fintech"
     }
-
     labels = {
       app = "webapp"
     }
-
-    name = "fintech"
   }
 }
 
-
-resource "kubernetes_namespace" "directory" {
+resource "kubernetes_namespace" "monitoring" {
   metadata {
+    name = "monitoring"
     annotations = {
       name = "monitoring"
     }
-
     labels = {
       app = "monitoring"
     }
-
-    name = "monitoring"
   }
 }
 
-
-
-
-resource "kubernetes_namespace" "analytics" {
+resource "kubernetes_namespace" "fintech-dev" {
   metadata {
+    name = "fintech-dev"
     annotations = {
       name = "fintech-dev"
     }
-
     labels = {
       app = "fintech-dev"
     }
-
-    name = "fintech-dev"
   }
 }
