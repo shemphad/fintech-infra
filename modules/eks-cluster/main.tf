@@ -35,16 +35,22 @@ module "eks" {
   }
 
   eks_managed_node_group_defaults = {
-    instance_types = ["m6i.large", "m5.large", "m5n.large", "m5zn.large"]
+     eks-node-group-1 = {
+      ami_type       = "AL2023_x86_64_STANDARD"
+      instance_types = ["t2.medium"]
+      min_size       = 1
+      max_size       = 10
+      desired_size   = 1
+    }
     iam_role_additional_policies = {
       AmazonEKS_CNI_Policy = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
     }
   }
 
   eks_managed_node_groups = {
-    default = {
+    eks-node-group-2 = {
       ami_type       = "AL2023_x86_64_STANDARD"
-      instance_types = ["m5.xlarge"]
+      instance_types = ["t2.medium"]
       min_size       = 1
       max_size       = 10
       desired_size   = 1
