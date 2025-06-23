@@ -1,19 +1,29 @@
+provider "kubernetes" {
+  host                   = module.eks.cluster_endpoint
+  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+  token                  = data.aws_eks_cluster_auth.main.token
+}
+
 data "aws_caller_identity" "current" {}
+
+data "aws_eks_cluster_auth" "main" {
+  name = var.cluster_name
+}
 
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 20.0"
 
   cluster_name    = var.cluster_name
-  cluster_version = "1.30" # downgraded as per original request
+  cluster_version = "1.31"
 
   enable_cluster_creator_admin_permissions = true
   cluster_endpoint_public_access           = true
   bootstrap_self_managed_addons            = false
 
-  vpc_id                    = var.vpc_id
-  subnet_ids                = var.private_subnets
-  control_plane_subnet_ids  = var.private_subnets
+  vpc_id                   = var.vpc_id
+  subnet_ids               = var.private_subnets
+  control_plane_subnet_ids = var.private_subnets
   cluster_additional_security_group_ids = var.security_group_ids
 
   create_cloudwatch_log_group = true
@@ -48,15 +58,15 @@ module "eks" {
 
   eks_managed_node_groups = {
     eks-node-group-2 = {
-      # Uses defaults above
+      # Uses the defaults above
     }
   }
 
-  # Avoid "system:*" group names in access_entries
   access_entries = {
     fusi = {
       kubernetes_groups = ["eks-admins"]
-      principal_arn     = var.rolearn
+      principal_arn     = "arn:aws:iam::999568710647:user/fusi"
+
       policy_associations = [
         {
           policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
@@ -70,6 +80,7 @@ module "eks" {
     github_runner = {
       kubernetes_groups = ["eks-admins"]
       principal_arn     = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/github-runner-ssm-role"
+
       policy_associations = [
         {
           policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
@@ -82,6 +93,27 @@ module "eks" {
   }
 
   tags = local.common_tags
+}
+
+# -----------------------------------------
+# ✅ ClusterRoleBinding for eks-admins group
+# -----------------------------------------
+resource "kubernetes_cluster_role_binding" "eks_admins_binding" {
+  metadata {
+    name = "eks-admins-binding"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "cluster-admin"
+  }
+
+  subject {
+    kind      = "Group"
+    name      = "eks-admins"
+    api_group = "rbac.authorization.k8s.io"
+  }
 }
 
 ################################################################################
