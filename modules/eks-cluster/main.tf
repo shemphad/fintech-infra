@@ -1,13 +1,14 @@
-provider "kubernetes" {
-  host                   = module.eks.cluster_endpoint
-  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
-  token                  = data.aws_eks_cluster_auth.main.token
+data "aws_eks_cluster_auth" "main" {
+  name = var.cluster_name
 }
 
 data "aws_caller_identity" "current" {}
 
-data "aws_eks_cluster_auth" "main" {
-  name = var.cluster_name
+provider "kubernetes" {
+  host                   = module.eks.cluster_endpoint
+  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+  token                  = data.aws_eks_cluster_auth.main.token
+  alias                  = "eks"
 }
 
 module "eks" {
@@ -63,6 +64,7 @@ module "eks" {
   }
 
   access_entries = {
+    # ✅ Map 'fusi' user to eks-admins
     fusi = {
       kubernetes_groups = ["eks-admins"]
       principal_arn     = "arn:aws:iam::999568710647:user/fusi"
@@ -79,7 +81,7 @@ module "eks" {
 
     github_runner = {
       kubernetes_groups = ["eks-admins"]
-      principal_arn     = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/github-runner-ssm-role"
+      principal_arn     = "arn:aws:iam::999568710647:role/github-runner-ssm-role"
 
       policy_associations = [
         {
@@ -99,6 +101,8 @@ module "eks" {
 # ✅ ClusterRoleBinding for eks-admins group
 # -----------------------------------------
 resource "kubernetes_cluster_role_binding" "eks_admins_binding" {
+  provider = kubernetes.eks
+
   metadata {
     name = "eks-admins-binding"
   }
