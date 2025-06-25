@@ -28,20 +28,18 @@ resource "aws_iam_role" "github_actions_role" {
   })
 }
 
-# Use this Terraform configuration to create the GitHub Actions OIDC provider in AWS
+# GitHub OIDC Provider
 resource "aws_iam_openid_connect_provider" "github_oidc" {
   url = "https://token.actions.githubusercontent.com"
 
-  client_id_list = [
-    "sts.amazonaws.com"
-  ]
+  client_id_list = ["sts.amazonaws.com"]
 
   thumbprint_list = [
-    "6938fd4d98bab03faadb97b34396831e3780aea1"  # ✅ GitHub's official OIDC thumbprint
+    "6938fd4d98bab03faadb97b34396831e3780aea1"
   ]
 }
 
-# Attach ECR permissions to IAM Role
+# GitHub ECR Policy
 resource "aws_iam_policy" "github_ecr_policy" {
   name        = "${var.environment}-GitHubECRPolicy"
   description = "Permissions for GitHub Actions to push/pull from ECR"
@@ -77,7 +75,6 @@ resource "aws_iam_policy" "github_ecr_policy" {
         ]
         Resource = "arn:aws:ecr:${var.aws_region}:*"
       },
-      # Allow GitHub Actions to assume the role correctly
       {
         Effect = "Allow"
         Action = "sts:TagSession"
@@ -87,12 +84,12 @@ resource "aws_iam_policy" "github_ecr_policy" {
   })
 }
 
-
-# Attach EKS permissions to IAM Role
+# GitHub EKS Policy
 resource "aws_iam_policy" "github_eks_policy" {
   name        = "${var.environment}-GitHubEKSPolicy"
   description = "Permissions for GitHub Actions to deploy to EKS"
-  policy      = jsonencode({
+
+  policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
@@ -115,7 +112,7 @@ resource "aws_iam_policy" "github_eks_policy" {
   })
 }
 
-# Attach Policies to Role
+# Attach GitHub Policies to Role
 resource "aws_iam_role_policy_attachment" "attach_ecr" {
   role       = aws_iam_role.github_actions_role.name
   policy_arn = aws_iam_policy.github_ecr_policy.arn
@@ -125,26 +122,36 @@ resource "aws_iam_role_policy_attachment" "attach_eks" {
   role       = aws_iam_role.github_actions_role.name
   policy_arn = aws_iam_policy.github_eks_policy.arn
 }
-####################
 
-####################
+##############################
+# ✅ Updated CNI Role
+##############################
 resource "aws_iam_role" "cni_role" {
   name = "${var.environment}-AmazonEKS-CNIRole"
 
   assume_role_policy = jsonencode({
-    Version = "2012-10-17"
+    Version = "2012-10-17",
     Statement = [
       {
-        Effect = "Allow"
+        Effect = "Allow",
         Principal = {
-          Service = "eks.amazonaws.com"
-        }
+          Service = "eks-pods.amazonaws.com"
+        },
         Action = "sts:AssumeRole"
       }
     ]
   })
 }
 
+resource "aws_iam_role_policy_attachment" "cni_policy_attachment" {
+  role       = aws_iam_role.cni_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+}
+
+# Output to reference in EKS module
+output "cni_role_arn" {
+  value = aws_iam_role.cni_role.arn
+}
 
 resource "aws_iam_role_policy_attachment" "cni_policy_attachment" {
   role       = aws_iam_role.cni_role.name
