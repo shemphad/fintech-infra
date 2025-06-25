@@ -148,14 +148,7 @@ resource "aws_iam_role_policy_attachment" "cni_policy_attachment" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
 }
 
-# Output to reference in EKS module
-output "cni_role_arn" {
-  value = aws_iam_role.cni_role.arn
-}
 
-resource "aws_iam_role_policy_attachment" "cni_policy_attachment" {
-  role       = aws_iam_role.cni_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
-}
+
 
 
