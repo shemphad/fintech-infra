@@ -131,7 +131,6 @@ module "ecr" {
   tags           = local.common_tags
 }
 
-
 module "iam" {
   source            = "./../modules/iam"
   environment       = var.env_name
@@ -139,9 +138,6 @@ module "iam" {
   aws_account_id    = var.aws_account_id
   eks_oidc_provider = local.eks_oidc_provider
   tags              = local.common_tags
-  depends_on        = [module.eks]
-
-
 }
 
 

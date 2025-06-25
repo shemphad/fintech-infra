@@ -20,23 +20,14 @@ data "aws_eks_cluster" "this" {
   name = var.cluster_name
 }
 
-# Local values
+# Combined locals
 locals {
-  final_ami_id = var.ami_id != "" ? var.ami_id : data.aws_ami.ubuntu_latest[0].id
+  final_ami_id       = var.ami_id != "" ? var.ami_id : data.aws_ami.ubuntu_latest[0].id
 
-  eks_oidc_provider = replace(data.aws_eks_cluster.this.identity[0].oidc[0].issuer, "https://", "")
+  eks_oidc_provider  = replace(data.aws_eks_cluster.this.identity[0].oidc[0].issuer, "https://", "")
 
-  common_tags = merge(var.tags, {
+  common_tags        = merge(var.tags, {
     env_name = var.env_name
   })
-}
-
-
-data "aws_eks_cluster" "this" {
-  name = var.cluster_name
-}
-
-locals {
-  eks_oidc_provider = replace(data.aws_eks_cluster.this.identity[0].oidc[0].issuer, "https://", "")
 }
 
