@@ -2,7 +2,10 @@ provider "aws" {
   region = "us-east-2"
 }
 
-# IAM Role for GitHub Actions
+########################################
+# GitHub Actions IAM Role + Policies
+########################################
+
 resource "aws_iam_role" "github_actions_role" {
   name = "${var.environment}-GitHubActionsECR"
 
@@ -28,7 +31,6 @@ resource "aws_iam_role" "github_actions_role" {
   })
 }
 
-# GitHub OIDC Provider
 resource "aws_iam_openid_connect_provider" "github_oidc" {
   url = "https://token.actions.githubusercontent.com"
 
@@ -39,7 +41,6 @@ resource "aws_iam_openid_connect_provider" "github_oidc" {
   ]
 }
 
-# GitHub ECR Policy
 resource "aws_iam_policy" "github_ecr_policy" {
   name        = "${var.environment}-GitHubECRPolicy"
   description = "Permissions for GitHub Actions to push/pull from ECR"
@@ -73,7 +74,7 @@ resource "aws_iam_policy" "github_ecr_policy" {
           "ecr:CompleteLayerUpload",
           "ecr:PutImage"
         ]
-        Resource = "arn:aws:ecr:${var.aws_region}:*"
+        Resource = "arn:aws:ecr:${var.aws_region}:${var.aws_account_id}:*"
       },
       {
         Effect = "Allow"
@@ -84,7 +85,6 @@ resource "aws_iam_policy" "github_ecr_policy" {
   })
 }
 
-# GitHub EKS Policy
 resource "aws_iam_policy" "github_eks_policy" {
   name        = "${var.environment}-GitHubEKSPolicy"
   description = "Permissions for GitHub Actions to deploy to EKS"
@@ -112,7 +112,6 @@ resource "aws_iam_policy" "github_eks_policy" {
   })
 }
 
-# Attach GitHub Policies to Role
 resource "aws_iam_role_policy_attachment" "attach_ecr" {
   role       = aws_iam_role.github_actions_role.name
   policy_arn = aws_iam_policy.github_ecr_policy.arn
@@ -123,9 +122,10 @@ resource "aws_iam_role_policy_attachment" "attach_eks" {
   policy_arn = aws_iam_policy.github_eks_policy.arn
 }
 
-##############################
-# ✅ Updated CNI Role
-##############################
+########################################
+# ✅ Amazon EKS CNI Add-on IAM Role (IRSA)
+########################################
+
 resource "aws_iam_role" "cni_role" {
   name = "${var.environment}-AmazonEKS-CNIRole"
 
@@ -135,9 +135,14 @@ resource "aws_iam_role" "cni_role" {
       {
         Effect = "Allow",
         Principal = {
-          Service = "eks-pods.amazonaws.com"
+          Federated = "arn:aws:iam::${var.aws_account_id}:oidc-provider/${var.eks_oidc_provider}"
         },
-        Action = "sts:AssumeRole"
+        Action = "sts:AssumeRoleWithWebIdentity",
+        Condition = {
+          StringEquals = {
+            "${var.eks_oidc_provider}:sub" = "system:serviceaccount:kube-system:aws-node"
+          }
+        }
       }
     ]
   })
@@ -147,7 +152,6 @@ resource "aws_iam_role_policy_attachment" "cni_policy_attachment" {
   role       = aws_iam_role.cni_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
 }
-
 
 
 
