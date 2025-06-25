@@ -137,8 +137,10 @@ module "iam" {
   aws_region        = var.aws_region
   aws_account_id    = var.aws_account_id
   eks_oidc_provider = local.eks_oidc_provider
+  cluster_name      = var.cluster_name
   tags              = local.common_tags
 }
+
 
 
 ##############################################
