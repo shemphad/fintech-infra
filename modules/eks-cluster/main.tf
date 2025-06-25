@@ -1,24 +1,34 @@
-#############################
-# Fetch AWS Account ID
-#############################
+data "aws_eks_cluster_auth" "main" {
+  name = var.cluster_name
+}
+
 data "aws_caller_identity" "current" {}
 
-################################################################################
-# EKS Cluster
-################################################################################
+provider "kubernetes" {
+  host                   = module.eks.cluster_endpoint
+  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+  token                  = data.aws_eks_cluster_auth.main.token
+  alias                  = "eks"
+}
 
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 19.0"
+  version = "~> 20.0"
 
   cluster_name    = var.cluster_name
-  cluster_version = "1.29"
+  cluster_version = "1.31"
 
-  cluster_endpoint_public_access = true
+  enable_cluster_creator_admin_permissions = true
+  cluster_endpoint_public_access           = true
+  bootstrap_self_managed_addons            = false
 
-  create_kms_key              = false
-  create_cloudwatch_log_group = false
-  cluster_encryption_config   = {}
+  vpc_id                   = var.vpc_id
+  subnet_ids               = var.private_subnets
+  control_plane_subnet_ids = var.private_subnets
+  cluster_additional_security_group_ids = var.security_group_ids
+
+  create_cloudwatch_log_group = true
+  cluster_enabled_log_types   = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
 
   cluster_addons = {
     coredns = {
@@ -28,110 +38,124 @@ module "eks" {
       most_recent = true
     }
     vpc-cni = {
-      most_recent = true
+      most_recent               = true
+      service_account_role_arn  = var.cni_role_arn
     }
-    aws-ebs-csi-driver = {
+    eks-pod-identity-agent = {
       most_recent = true
     }
   }
 
-  vpc_id                   = var.vpc_id
-  subnet_ids               = var.private_subnets
-  control_plane_subnet_ids = var.private_subnets
-  cluster_additional_security_group_ids = var.security_group_ids
-
-  # EKS Managed Node Group(s)
   eks_managed_node_group_defaults = {
-    instance_types = ["m5.xlarge", "m5.large", "t3.medium"]
+    ami_type       = "AL2023_x86_64_STANDARD"
+    instance_types = ["t2.medium"]
+    min_size       = 1
+    max_size       = 10
+    desired_size   = 1
     iam_role_additional_policies = {
-      AmazonEBSCSIDriverPolicy = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+      AmazonEKS_CNI_Policy = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
     }
   }
 
   eks_managed_node_groups = {
-    node-group-01 = {
-      min_size     = 1
-      max_size     = 10
-      desired_size = 1
-    }
-    node-group-02 = {
-      min_size     = 1
-      max_size     = 10
-      desired_size = 1
-
-      instance_types = ["t3.large"]
-      capacity_type  = "SPOT"
+    eks-node-group-2 = {
+      # Uses the defaults above
     }
   }
 
-  # aws-auth configmap
-  manage_aws_auth_configmap = true
-  #create_aws_auth_configmap = true
+  access_entries = {
+    # ✅ Map 'fusi' user to eks-admins
+    fusi = {
+      kubernetes_groups = ["eks-admins"]
+      principal_arn     = "arn:aws:iam::999568710647:user/fusi"
 
-  aws_auth_roles = [
-    {
-      rolearn  = var.rolearn
-      username = "fusi"
-      groups   = ["system:masters"]
-    },
-    {
-      rolearn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/github-runner-ssm-role"
-      username = "github-runner"
-      groups   = ["system:masters"]
+      policy_associations = [
+        {
+          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+          access_scope = {
+            type = "cluster"
+          }
+        }
+      ]
     }
 
-  ]
+    github_runner = {
+      kubernetes_groups = ["eks-admins"]
+      principal_arn     = "arn:aws:iam::999568710647:role/github-runner-ssm-role"
 
-  tags = {
-    env       = "dev"
-    terraform = "true"
+      policy_associations = [
+        {
+          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+          access_scope = {
+            type = "cluster"
+          }
+        }
+      ]
+    }
+  }
+
+  tags = local.common_tags
+}
+
+# -----------------------------------------
+# ✅ ClusterRoleBinding for eks-admins group
+# -----------------------------------------
+resource "kubernetes_cluster_role_binding" "eks_admins_binding" {
+  provider = kubernetes.eks
+
+  metadata {
+    name = "eks-admins-binding"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "cluster-admin"
+  }
+
+  subject {
+    kind      = "Group"
+    name      = "eks-admins"
+    api_group = "rbac.authorization.k8s.io"
   }
 }
 
-#creating namespaces
-resource "kubernetes_namespace" "gateway" {
+################################################################################
+# Kubernetes Namespaces
+################################################################################
+
+resource "kubernetes_namespace" "fintech" {
   metadata {
+    name = "fintech"
     annotations = {
       name = "fintech"
     }
-
     labels = {
-      app = "webapp"
+      app = "fintech"
     }
-
-    name = "fintech"
   }
 }
 
-
-resource "kubernetes_namespace" "directory" {
+resource "kubernetes_namespace" "monitoring" {
   metadata {
+    name = "monitoring"
     annotations = {
       name = "monitoring"
     }
-
     labels = {
       app = "monitoring"
     }
-
-    name = "monitoring"
   }
 }
 
-
-
-
-resource "kubernetes_namespace" "analytics" {
+resource "kubernetes_namespace" "fintech_dev" {
   metadata {
+    name = "fintech-dev"
     annotations = {
       name = "fintech-dev"
     }
-
     labels = {
       app = "fintech-dev"
     }
-
-    name = "fintech-dev"
   }
 }
-

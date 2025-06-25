@@ -2,7 +2,7 @@
 # General Variables from root module
 ################################################################################
 variable "cluster_name" {
-  type    = string
+  type = string
 }
 
 ################################################################################
@@ -22,12 +22,33 @@ variable "private_subnets" {
 variable "security_group_ids" {
   description = "Addtional Security Groups for EKS control plane"
   type        = list(any)
-} 
+}
 ################################################################################
 # Variables defined using Environment Variables
 ################################################################################
 
+
 variable "rolearn" {
-  description = "Add admin role to the aws-auth configmap"
+  description = "IAM Role for admin access to the EKS cluster"
+  type        = string
+}
+
+variable "cni_role_arn" {
+  description = "IAM Role for vpc-cni addon"
+  type        = string
+}
+
+variable "tags" {
+  description = "Common tags for the cluster resources"
+  type        = map(string)
+  default = {
+    product   = "eks-cluster"
+    ManagedBy = "terraform"
+    project   = "fintech"
+  }
+}
+
+variable "env_name" {
+  type = string
 }
 

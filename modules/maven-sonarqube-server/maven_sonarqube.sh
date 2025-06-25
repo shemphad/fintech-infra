@@ -3,12 +3,17 @@ set -euo pipefail
 
 ### 1) kubectl client
 echo "Installing kubectl..."
-curl -fsSL -o kubectl \
+
+# Download kubectl binary
+curl -fsSL -o /usr/local/bin/kubectl \
   https://s3.us-west-2.amazonaws.com/amazon-eks/1.27.12/2024-04-19/bin/linux/amd64/kubectl
-chmod +x kubectl
-mkdir -p "$HOME/bin"
-mv kubectl "$HOME/bin/"
-export PATH="$HOME/bin:$PATH"
+
+# Make it executable and available globally
+chmod +x /usr/local/bin/kubectl
+
+# Confirm installation
+echo "Verifying kubectl installation..."
+kubectl version --client
 
 ### 2) Dependencies & AWS CLI
 echo "Updating apt and installing dependencies..."

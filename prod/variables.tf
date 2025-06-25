@@ -3,7 +3,7 @@
 # # Default Variables
 # ################################################################################
 
-variable "main-region" {
+variable "main_region" {
   type    = string
   default = "us-east-2"
 }
@@ -21,7 +21,10 @@ variable "cluster_name" {
 variable "rolearn" {
   description = "Add admin role to the aws-auth configmap"
   default     = "arn:aws:iam::999568710647:role/terraform-create-role"
+
 }
+
+
 
 # ################################################################################
 # # ALB Controller Variables

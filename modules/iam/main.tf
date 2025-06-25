@@ -1,5 +1,5 @@
 provider "aws" {
-  region = "us-east-1"
+  region = "us-east-2"
 }
 
 # IAM Role for GitHub Actions
@@ -124,6 +124,31 @@ resource "aws_iam_role_policy_attachment" "attach_ecr" {
 resource "aws_iam_role_policy_attachment" "attach_eks" {
   role       = aws_iam_role.github_actions_role.name
   policy_arn = aws_iam_policy.github_eks_policy.arn
+}
+####################
+
+####################
+resource "aws_iam_role" "cni_role" {
+  name = "${var.environment}-AmazonEKS-CNIRole"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "eks.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+
+resource "aws_iam_role_policy_attachment" "cni_policy_attachment" {
+  role       = aws_iam_role.cni_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
 }
 
 
