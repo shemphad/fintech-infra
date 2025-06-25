@@ -15,17 +15,15 @@ data "aws_ami" "ubuntu_latest" {
   }
 }
 
-# EKS cluster data source (used for IRSA OIDC derivation)
-data "aws_eks_cluster" "this" {
-  name = var.cluster_name
-}
-
 # Combined locals
 locals {
+  # Use the provided AMI or fetch the latest Ubuntu 20.04
   final_ami_id = var.ami_id != "" ? var.ami_id : data.aws_ami.ubuntu_latest[0].id
 
-  eks_oidc_provider = replace(data.aws_eks_cluster.this.identity[0].oidc[0].issuer, "https://", "")
+  # Safely derive the OIDC provider URL after EKS is created
+  eks_oidc_provider = replace(module.eks.cluster_oidc_issuer_url, "https://", "")
 
+  # Combine base tags with env_name
   common_tags = merge(var.tags, {
     env_name = var.env_name
   })
