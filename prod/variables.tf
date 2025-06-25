@@ -55,10 +55,6 @@ variable "rolearn" {
   default     = "arn:aws:iam::999568710647:role/terraform-create-role"
 }
 
-variable "eks_oidc_provider" {
-  description = "OIDC provider derived from the EKS cluster (used for IRSA)"
-  type        = string
-}
 
 ################################################################################
 # EC2 / Client Node Configuration

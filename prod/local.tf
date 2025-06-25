@@ -30,3 +30,13 @@ locals {
     env_name = var.env_name
   })
 }
+
+
+data "aws_eks_cluster" "this" {
+  name = var.cluster_name
+}
+
+locals {
+  eks_oidc_provider = replace(data.aws_eks_cluster.this.identity[0].oidc[0].issuer, "https://", "")
+}
+
