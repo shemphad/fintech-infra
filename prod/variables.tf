@@ -33,7 +33,7 @@ variable "env_name" {
 variable "tags" {
   description = "Common tags for all resources"
   type        = map(string)
-  default     = {
+  default = {
     product   = "fintech-app"
     ManagedBy = "terraform"
   }

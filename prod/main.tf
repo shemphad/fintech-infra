@@ -12,18 +12,18 @@ module "vpc" {
 # ################################################################################
 
 module "eks" {
-  source               = "./../modules/eks-cluster"
-  cluster_name         = var.cluster_name
-  rolearn              = var.rolearn
-  cni_role_arn         = module.iam.cni_role_arn
-  eks_oidc_provider    = local.eks_oidc_provider
+  source            = "./../modules/eks-cluster"
+  cluster_name      = var.cluster_name
+  rolearn           = var.rolearn
+  cni_role_arn      = module.iam.cni_role_arn
+  eks_oidc_provider = local.eks_oidc_provider
 
-  security_group_ids   = [module.eks-client-node.eks_client_sg]
-  vpc_id               = module.vpc.vpc_id
-  private_subnets      = module.vpc.private_subnets
+  security_group_ids = [module.eks-client-node.eks_client_sg]
+  vpc_id             = module.vpc.vpc_id
+  private_subnets    = module.vpc.private_subnets
 
-  tags                 = local.common_tags
-  env_name             = var.env_name
+  tags     = local.common_tags
+  env_name = var.env_name
 }
 
 
@@ -135,12 +135,12 @@ module "ecr" {
 
 
 module "iam" {
-  source             = "./../modules/iam"
-  environment        = var.env_name
-  aws_region         = var.aws_region
-  aws_account_id     = var.aws_account_id
-  eks_oidc_provider  = local.eks_oidc_provider
-  tags               = local.common_tags
+  source            = "./../modules/iam"
+  environment       = var.env_name
+  aws_region        = var.aws_region
+  aws_account_id    = var.aws_account_id
+  eks_oidc_provider = local.eks_oidc_provider
+  tags              = local.common_tags
 }
 
 
