@@ -20,9 +20,7 @@ module "eks" {
 
   enable_cluster_creator_admin_permissions = true
   cluster_endpoint_public_access           = true
-
-  # ✅ Updated: Enable add-on bootstrap via Terraform
-  bootstrap_self_managed_addons = true
+  bootstrap_self_managed_addons           = true
 
   vpc_id                   = var.vpc_id
   subnet_ids               = var.private_subnets
@@ -46,8 +44,8 @@ module "eks" {
       most_recent = true
     }
     vpc-cni = {
-      most_recent              = true
-      service_account_role_arn = var.cni_role_arn  # ✅ ensure this is passed correctly
+      most_recent               = true
+      service_account_role_arn  = var.cni_role_arn
     }
     eks-pod-identity-agent = {
       most_recent = true
@@ -72,20 +70,6 @@ module "eks" {
   }
 
   access_entries = {
-    fusi = {
-      kubernetes_groups = ["eks-admins"]
-      principal_arn     = "arn:aws:iam::999568710647:user/fusi"
-
-      policy_associations = [
-        {
-          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-          access_scope = {
-            type = "cluster"
-          }
-        }
-      ]
-    }
-
     github_runner = {
       kubernetes_groups = ["eks-admins"]
       principal_arn     = "arn:aws:iam::999568710647:role/github-runner-ssm-role"
@@ -104,7 +88,6 @@ module "eks" {
   tags = local.common_tags
 }
 
-# ✅ Bind eks-admins group to cluster-admin role
 resource "kubernetes_cluster_role_binding" "eks_admins_binding" {
   provider = kubernetes.eks
 
