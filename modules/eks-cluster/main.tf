@@ -1,16 +1,3 @@
-data "aws_eks_cluster_auth" "main" {
-  name = var.cluster_name
-}
-
-data "aws_caller_identity" "current" {}
-
-provider "kubernetes" {
-  host                   = module.eks.cluster_endpoint
-  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
-  token                  = data.aws_eks_cluster_auth.main.token
-  alias                  = "eks"
-}
-
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 20.0"
@@ -25,10 +12,10 @@ module "eks" {
   vpc_id                   = var.vpc_id
   subnet_ids               = var.private_subnets
   control_plane_subnet_ids = var.private_subnets
-  cluster_additional_security_group_ids = var.security_group_ids
+  cluster_additional_security_group_ids   = var.security_group_ids
 
   create_cloudwatch_log_group = true
-  cluster_enabled_log_types   = [
+  cluster_enabled_log_types = [
     "api",
     "audit",
     "authenticator",
@@ -44,8 +31,8 @@ module "eks" {
       most_recent = true
     }
     vpc-cni = {
-      most_recent               = true
-      service_account_role_arn  = var.cni_role_arn
+      most_recent              = true
+      service_account_role_arn = var.cni_role_arn
     }
     eks-pod-identity-agent = {
       most_recent = true
@@ -55,9 +42,9 @@ module "eks" {
   eks_managed_node_group_defaults = {
     ami_type       = "AL2023_x86_64_STANDARD"
     instance_types = ["t2.medium"]
-    min_size       = 2
+    min_size       = 1
     max_size       = 10
-    desired_size   = 2
+    desired_size   = 1
     iam_role_additional_policies = {
       AmazonEKS_CNI_Policy = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
     }
@@ -65,7 +52,9 @@ module "eks" {
 
   eks_managed_node_groups = {
     eks-node-group-2 = {
-      # Uses the defaults
+      desired_size = 2
+      min_size     = 2
+      max_size     = 10
     }
   }
 
@@ -86,26 +75,6 @@ module "eks" {
   }
 
   tags = local.common_tags
-}
-
-resource "kubernetes_cluster_role_binding" "eks_admins_binding" {
-  provider = kubernetes.eks
-
-  metadata {
-    name = "eks-admins-binding"
-  }
-
-  role_ref {
-    api_group = "rbac.authorization.k8s.io"
-    kind      = "ClusterRole"
-    name      = "cluster-admin"
-  }
-
-  subject {
-    kind      = "Group"
-    name      = "eks-admins"
-    api_group = "rbac.authorization.k8s.io"
-  }
 }
 
 ################################################################################
