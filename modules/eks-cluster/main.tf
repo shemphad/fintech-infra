@@ -57,7 +57,7 @@ module "eks" {
     instance_types = ["t2.medium"]
     min_size       = 1
     max_size       = 10
-    desired_size   = 1
+    desired_size   = 2
     iam_role_additional_policies = {
       AmazonEKS_CNI_Policy = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
     }
