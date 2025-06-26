@@ -22,9 +22,9 @@ module "eks" {
   cluster_endpoint_public_access           = true
   bootstrap_self_managed_addons           = true
 
-  vpc_id                   = var.vpc_id
-  subnet_ids               = var.private_subnets
-  control_plane_subnet_ids = var.private_subnets
+  vpc_id                                = var.vpc_id
+  subnet_ids                            = var.private_subnets
+  control_plane_subnet_ids              = var.private_subnets
   cluster_additional_security_group_ids = var.security_group_ids
 
   create_cloudwatch_log_group = true
@@ -45,7 +45,7 @@ module "eks" {
     }
     vpc-cni = {
       most_recent               = true
-      service_account_role_arn  = var.cni_role_arn
+      service_account_role_arn = var.cni_role_arn
     }
     eks-pod-identity-agent = {
       most_recent = true
@@ -55,9 +55,6 @@ module "eks" {
   eks_managed_node_group_defaults = {
     ami_type       = "AL2023_x86_64_STANDARD"
     instance_types = ["t2.medium"]
-    min_size       = 2
-    max_size       = 10
-    desired_size   = 2
     iam_role_additional_policies = {
       AmazonEKS_CNI_Policy = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
     }
@@ -65,8 +62,8 @@ module "eks" {
 
   eks_managed_node_groups = {
     eks-node-group-2 = {
-      desired_size = 2
       min_size     = 2
+      desired_size = 2
       max_size     = 10
     }
   }
@@ -88,6 +85,26 @@ module "eks" {
   }
 
   tags = local.common_tags
+}
+
+resource "kubernetes_cluster_role_binding" "eks_admins_binding" {
+  provider = kubernetes.eks
+
+  metadata {
+    name = "eks-admins-binding"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "cluster-admin"
+  }
+
+  subject {
+    kind      = "Group"
+    name      = "eks-admins"
+    api_group = "rbac.authorization.k8s.io"
+  }
 }
 
 resource "kubernetes_cluster_role_binding" "eks_admins_binding" {
