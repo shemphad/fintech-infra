@@ -18,7 +18,7 @@ module "eks" {
   cluster_name    = var.cluster_name
   cluster_version = "1.31"
 
-  enable_cluster_creator_admin_permissions = true
+  enable_cluster_creator_admin_permissions = true # Keep for legacy bootstrap
   cluster_endpoint_public_access           = true
   bootstrap_self_managed_addons            = true
 
@@ -39,7 +39,8 @@ module "eks" {
 
   access_entries = {
     terraform_user = {
-      kubernetes_groups = ["system:masters"]
+      # ✅ Use a custom group, NOT system:masters
+      kubernetes_groups = ["platform-admins"]
       principal_arn     = "arn:aws:iam::999568710647:user/fusi"
 
       policy_associations = [
@@ -70,6 +71,26 @@ module "eks" {
   tags = local.common_tags
 }
 
+# Bind terraform_user to cluster-admin
+resource "kubernetes_cluster_role_binding" "platform_admins_binding" {
+  metadata {
+    name = "platform-admins-binding"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "cluster-admin"
+  }
+
+  subject {
+    kind      = "Group"
+    name      = "platform-admins"
+    api_group = "rbac.authorization.k8s.io"
+  }
+}
+
+# Bind github_runner to cluster-admin
 resource "kubernetes_cluster_role_binding" "eks_admins_binding" {
   metadata {
     name = "eks-admins-binding"
@@ -87,6 +108,7 @@ resource "kubernetes_cluster_role_binding" "eks_admins_binding" {
     api_group = "rbac.authorization.k8s.io"
   }
 }
+
 
 ################################################################################
 # Kubernetes Namespaces
