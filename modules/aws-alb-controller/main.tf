@@ -9,11 +9,11 @@ resource "helm_release" "lb" {
   namespace  = "kube-system"
   create_namespace = true
 
-  depends_on = [
-  module.lb_role,
-  kubernetes_service_account.service_account,
-  module.eks  # This covers all internal addons too!
-]
+#   depends_on = [
+#   module.lb_role,
+#   kubernetes_service_account.service_account,
+#   module.eks  # This covers all internal addons too!
+# ]
 
   set = [
     {
