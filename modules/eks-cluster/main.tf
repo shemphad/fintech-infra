@@ -18,44 +18,76 @@ module "eks" {
   cluster_name    = var.cluster_name
   cluster_version = "1.31"
 
-  enable_cluster_creator_admin_permissions = true # Keep for legacy bootstrap
+  enable_cluster_creator_admin_permissions = true
   cluster_endpoint_public_access           = true
-  bootstrap_self_managed_addons            = true
+
+  bootstrap_self_managed_addons = false
 
   vpc_id                                = var.vpc_id
   subnet_ids                            = var.private_subnets
   control_plane_subnet_ids              = var.private_subnets
   cluster_additional_security_group_ids = var.security_group_ids
 
+  create_cloudwatch_log_group = true
+  cluster_enabled_log_types   = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
+
+  ###########################################################
+  # Core EKS Addons - Safe config with conflict resolution
+  ###########################################################
   cluster_addons = {
-  coredns = {
-    most_recent       = true
-    resolve_conflicts = "OVERWRITE"
+    coredns = {
+      most_recent       = true
+      resolve_conflicts = "OVERWRITE"
+    }
+    kube-proxy = {
+      most_recent       = true
+      resolve_conflicts = "OVERWRITE"
+    }
+    vpc-cni = {
+      most_recent              = true
+      service_account_role_arn = var.cni_role_arn
+      resolve_conflicts        = "OVERWRITE"
+    }
+    eks-pod-identity-agent = {
+      most_recent       = true
+      resolve_conflicts = "OVERWRITE"
+    }
   }
 
-  kube-proxy = {
-    most_recent       = true
-    resolve_conflicts = "OVERWRITE"
+  ###########################################################
+  # Managed Node Group Defaults - Best practice
+  ###########################################################
+  eks_managed_node_group_defaults = {
+    ami_type       = "AL2023_x86_64_STANDARD"
+    instance_types = ["t3.medium"]
+
+    min_size     = 1
+    max_size     = 5
+    desired_size = 2
+
+    iam_role_additional_policies = {
+      AmazonEKSWorkerNodePolicy          = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+      AmazonEKS_CNI_Policy               = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+      AmazonEC2ContainerRegistryReadOnly = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+    }
   }
 
-  vpc-cni = {
-    most_recent               = true
-    service_account_role_arn = var.cni_role_arn
-    resolve_conflicts         = "OVERWRITE"
+  ###########################################################
+  # Managed Node Groups
+  ###########################################################
+  eks_managed_node_groups = {
+    eks-node-group-1 = {
+      # Uses all defaults above
+    }
   }
 
-  eks-pod-identity-agent = {
-    most_recent       = true
-    resolve_conflicts = "OVERWRITE"
-  }
-}
-
-
+  ###########################################################
+  # Access Entries - Map IAM users/roles to k8s RBAC
+  ###########################################################
   access_entries = {
-    terraform_user = {
-      # ✅ Use a custom group, NOT system:masters
-      kubernetes_groups = ["platform-admins"]
-      principal_arn     = "arn:aws:iam::999568710647:user/nfusi"
+    fusi = {
+      kubernetes_groups = ["eks-admins"]
+      principal_arn     = "arn:aws:iam::999568710647:user/fusi"
 
       policy_associations = [
         {
