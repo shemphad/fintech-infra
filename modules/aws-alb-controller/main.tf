@@ -1,41 +1,4 @@
 ################################################################################
-# Load Balancer IAM Role for Service Account
-################################################################################
-
-module "lb_role" {
-  source = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-
-  role_name                              = "${var.env_name}_eks_lb"
-  attach_load_balancer_controller_policy = true
-
-  oidc_providers = {
-    main = {
-      provider_arn               = var.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:aws-load-balancer-controller"]
-    }
-  }
-}
-
-################################################################################
-# Kubernetes Service Account for ALB Controller
-################################################################################
-
-resource "kubernetes_service_account" "service_account" {
-  metadata {
-    name      = "aws-load-balancer-controller"
-    namespace = "kube-system"
-    labels = {
-      "app.kubernetes.io/name"      = "aws-load-balancer-controller"
-      "app.kubernetes.io/component" = "controller"
-    }
-    annotations = {
-      "eks.amazonaws.com/role-arn"               = module.lb_role.iam_role_arn
-      "eks.amazonaws.com/sts-regional-endpoints" = "true"
-    }
-  }
-}
-
-################################################################################
 # Helm Release: AWS Load Balancer Controller
 ################################################################################
 
@@ -44,9 +7,13 @@ resource "helm_release" "lb" {
   repository = "https://aws.github.io/eks-charts"
   chart      = "aws-load-balancer-controller"
   namespace  = "kube-system"
+  create_namespace = true
 
   depends_on = [
-    kubernetes_service_account.service_account
+    module.lb_role,                        # IAM role for service account
+    kubernetes_service_account.service_account, # Service account resource
+    module.eks,                             # Ensure EKS is up
+    aws_eks_addon.coredns                   # Ensure addons are Active
   ]
 
   set = [
