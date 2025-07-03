@@ -48,7 +48,7 @@ module "eks" {
   cluster_addons = {
     vpc-cni = {
       most_recent              = true
-      service_account_role_arn = module.iam.cni_role_arn  # ✅ Use IAM module output!
+      service_account_role_arn = var.cni_role_arn  # ✅ Use IAM module output!
       resolve_conflicts        = "OVERWRITE"
     }
 
