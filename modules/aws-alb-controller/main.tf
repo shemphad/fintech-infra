@@ -10,11 +10,10 @@ resource "helm_release" "lb" {
   create_namespace = true
 
   depends_on = [
-    module.lb_role,                        # IAM role for service account
-    kubernetes_service_account.service_account, # Service account resource
-    module.eks,                             # Ensure EKS is up
-    aws_eks_addon.coredns                   # Ensure addons are Active
-  ]
+  module.lb_role,
+  kubernetes_service_account.service_account,
+  module.eks  # This covers all internal addons too!
+]
 
   set = [
     {
