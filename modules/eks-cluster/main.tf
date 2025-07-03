@@ -28,14 +28,28 @@ module "eks" {
   cluster_additional_security_group_ids = var.security_group_ids
 
   cluster_addons = {
-    coredns = { most_recent = true }
-    kube-proxy = { most_recent = true }
-    vpc-cni = {
-      most_recent               = true
-      service_account_role_arn = var.cni_role_arn
-    }
-    eks-pod-identity-agent = { most_recent = true }
+  coredns = {
+    most_recent       = true
+    resolve_conflicts = "OVERWRITE"
   }
+
+  kube-proxy = {
+    most_recent       = true
+    resolve_conflicts = "OVERWRITE"
+  }
+
+  vpc-cni = {
+    most_recent               = true
+    service_account_role_arn = var.cni_role_arn
+    resolve_conflicts         = "OVERWRITE"
+  }
+
+  eks-pod-identity-agent = {
+    most_recent       = true
+    resolve_conflicts = "OVERWRITE"
+  }
+}
+
 
   access_entries = {
     terraform_user = {
