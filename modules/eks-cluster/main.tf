@@ -1,5 +1,9 @@
+##############################################
+# Data + Auth
+##############################################
+
 data "aws_eks_cluster_auth" "main" {
-  name = var.cluster_name
+  name = module.eks.cluster_name
 }
 
 data "aws_caller_identity" "current" {}
@@ -7,9 +11,16 @@ data "aws_caller_identity" "current" {}
 provider "kubernetes" {
   host                   = module.eks.cluster_endpoint
   cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
-  token                  = data.aws_eks_cluster_auth.main.token
-  alias                  = "eks"
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    command     = "aws"
+    args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
+  }
 }
+
+##############################################
+# EKS Control Plane
+##############################################
 
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
@@ -23,17 +34,14 @@ module "eks" {
 
   bootstrap_self_managed_addons = false
 
-  vpc_id                                = var.vpc_id
-  subnet_ids                            = var.private_subnets
-  control_plane_subnet_ids              = var.private_subnets
+  vpc_id                   = var.vpc_id
+  subnet_ids               = var.private_subnets
+  control_plane_subnet_ids = var.private_subnets
   cluster_additional_security_group_ids = var.security_group_ids
 
   create_cloudwatch_log_group = true
   cluster_enabled_log_types   = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
 
-  ###########################################################
-  # Core EKS Addons - Safe config with conflict resolution
-  ###########################################################
   cluster_addons = {
     coredns = {
       most_recent       = true
@@ -54,9 +62,6 @@ module "eks" {
     }
   }
 
-  ###########################################################
-  # Managed Node Group Defaults - Best practice
-  ###########################################################
   eks_managed_node_group_defaults = {
     ami_type       = "AL2023_x86_64_STANDARD"
     instance_types = ["t3.medium"]
@@ -72,18 +77,12 @@ module "eks" {
     }
   }
 
-  ###########################################################
-  # Managed Node Groups
-  ###########################################################
   eks_managed_node_groups = {
     eks-node-group-1 = {
-      # Uses all defaults above
+      # Uses defaults above
     }
   }
 
-  ###########################################################
-  # Access Entries - Map IAM users/roles to k8s RBAC
-  ###########################################################
   access_entries = {
     fusi = {
       kubernetes_groups = ["eks-admins"]
@@ -117,7 +116,10 @@ module "eks" {
   tags = local.common_tags
 }
 
-# Bind terraform_user to cluster-admin
+##############################################
+# RBAC Bindings with depends_on
+##############################################
+
 resource "kubernetes_cluster_role_binding" "platform_admins_binding" {
   metadata {
     name = "platform-admins-binding"
@@ -134,9 +136,10 @@ resource "kubernetes_cluster_role_binding" "platform_admins_binding" {
     name      = "platform-admins"
     api_group = "rbac.authorization.k8s.io"
   }
+
+  depends_on = [module.eks]
 }
 
-# Bind github_runner to cluster-admin
 resource "kubernetes_cluster_role_binding" "eks_admins_binding" {
   metadata {
     name = "eks-admins-binding"
@@ -153,12 +156,13 @@ resource "kubernetes_cluster_role_binding" "eks_admins_binding" {
     name      = "eks-admins"
     api_group = "rbac.authorization.k8s.io"
   }
+
+  depends_on = [module.eks]
 }
 
-
-################################################################################
-# Kubernetes Namespaces
-################################################################################
+##############################################
+# Kubernetes Namespaces with depends_on
+##############################################
 
 resource "kubernetes_namespace" "fintech" {
   metadata {
@@ -170,6 +174,8 @@ resource "kubernetes_namespace" "fintech" {
       app = "fintech"
     }
   }
+
+  depends_on = [module.eks]
 }
 
 resource "kubernetes_namespace" "monitoring" {
@@ -182,6 +188,8 @@ resource "kubernetes_namespace" "monitoring" {
       app = "monitoring"
     }
   }
+
+  depends_on = [module.eks]
 }
 
 resource "kubernetes_namespace" "fintech_dev" {
@@ -194,4 +202,6 @@ resource "kubernetes_namespace" "fintech_dev" {
       app = "fintech-dev"
     }
   }
+
+  depends_on = [module.eks]
 }

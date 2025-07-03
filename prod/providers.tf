@@ -8,7 +8,6 @@ provider "kubernetes" {
     args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
   }
 
-  depends_on = [module.eks]
 }
 
 provider "helm" {
@@ -22,7 +21,6 @@ provider "helm" {
     }
   }
 
-  depends_on = [module.eks]
 }
 
 # provider "kubernetes" {
