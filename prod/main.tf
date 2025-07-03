@@ -45,8 +45,7 @@ module "aws_alb_controller" {
   oidc_provider_arn = module.eks.oidc_provider_arn
 
   depends_on = [
-    module.eks,
-    aws_eks_addon.coredns
+    module.eks
   ]
 }
 
