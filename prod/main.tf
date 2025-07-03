@@ -12,11 +12,11 @@ module "vpc" {
 # ################################################################################
 
 module "eks" {
-  source  = "./../modules/eks-cluster"
+  source = "./../modules/eks-cluster"
 
-  cluster_name  = var.cluster_name
-  rolearn            = var.rolearn
-  cni_role_arn       = module.iam.cni_role_arn
+  cluster_name = var.cluster_name
+  rolearn      = var.rolearn
+  cni_role_arn = module.iam.cni_role_arn
 
   security_group_ids = [module.eks-client-node.eks_client_sg]
   vpc_id             = module.vpc.vpc_id
