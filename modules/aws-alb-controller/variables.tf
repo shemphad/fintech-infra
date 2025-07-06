@@ -1,15 +1,9 @@
 ################################################################################
-# General Variables from Root Module
+# General Variables
 ################################################################################
 
 variable "main_region" {
-  description = "AWS Region where resources will be deployed"
-  type        = string
-  default     = "us-east-2"
-}
-
-variable "env_name" {
-  description = "Environment name (e.g., dev, staging, prod)"
+  description = "AWS Region for deployment"
   type        = string
 }
 
@@ -18,16 +12,12 @@ variable "cluster_name" {
   type        = string
 }
 
-################################################################################
-# Variables from Other Modules
-################################################################################
-
 variable "vpc_id" {
-  description = "VPC ID where Load Balancers will be deployed"
+  description = "VPC ID for the EKS cluster"
   type        = string
 }
 
 variable "oidc_provider_arn" {
-  description = "OIDC Provider ARN used for IRSA"
+  description = "OIDC Provider ARN for IRSA"
   type        = string
 }

@@ -37,16 +37,12 @@ module "eks" {
 module "aws_alb_controller" {
   source = "./../modules/aws-alb-controller"
 
-  main_region  = var.main_region
-  env_name     = var.env_name
-  cluster_name = var.cluster_name
-
+  main_region       = var.main_region
+  cluster_name      = var.cluster_name
   vpc_id            = module.vpc.vpc_id
   oidc_provider_arn = module.eks.oidc_provider_arn
 
-  depends_on = [
-    module.eks
-  ]
+  depends_on = [module.eks]
 }
 
 
