@@ -37,10 +37,56 @@ data "aws_iam_policy_document" "assume_role_policy" {
   }
 }
 
-# Attach AWS managed policy for ALB Controller
-resource "aws_iam_role_policy_attachment" "lb_controller_attach" {
-  role       = aws_iam_role.lb_controller.name
-  policy_arn = "arn:aws:iam::aws:policy/ELBIngressControllerPolicy" # Use your custom policy if needed
+################################################################################
+# Inline IAM Policy for ALB Controller (Official from AWS)
+################################################################################
+
+data "aws_iam_policy_document" "lb_controller_policy" {
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "acm:DescribeCertificate",
+      "acm:ListCertificates",
+      "acm:GetCertificate",
+      "ec2:AuthorizeSecurityGroupIngress",
+      "ec2:CreateSecurityGroup",
+      "ec2:CreateTags",
+      "ec2:DeleteTags",
+      "ec2:DeleteSecurityGroup",
+      "ec2:Describe*",
+      "ec2:ModifyInstanceAttribute",
+      "ec2:ModifyNetworkInterfaceAttribute",
+      "ec2:RevokeSecurityGroupIngress",
+      "elasticloadbalancing:*",
+      "iam:CreateServiceLinkedRole",
+      "iam:GetServerCertificate",
+      "iam:ListServerCertificates",
+      "waf-regional:GetWebACLForResource",
+      "waf-regional:GetWebACL",
+      "waf-regional:AssociateWebACL",
+      "waf-regional:DisassociateWebACL",
+      "tag:GetResources",
+      "tag:TagResources",
+      "waf:GetWebACL",
+      "waf:AssociateWebACL",
+      "waf:DisassociateWebACL",
+      "shield:GetSubscriptionState",
+      "shield:DescribeProtection",
+      "shield:CreateProtection",
+      "shield:DeleteProtection",
+      "shield:DescribeSubscription",
+      "shield:ListProtections"
+    ]
+
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "lb_controller_inline_policy" {
+  name = "${var.cluster_name}-aws-load-balancer-policy"
+  role = aws_iam_role.lb_controller.id
+  policy = data.aws_iam_policy_document.lb_controller_policy.json
 }
 
 ################################################################################

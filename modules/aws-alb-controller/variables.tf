@@ -3,7 +3,7 @@
 ################################################################################
 
 variable "main_region" {
-  description = "AWS Region for deployment"
+  description = "AWS Region"
   type        = string
 }
 
@@ -13,11 +13,11 @@ variable "cluster_name" {
 }
 
 variable "vpc_id" {
-  description = "VPC ID for the EKS cluster"
+  description = "VPC ID"
   type        = string
 }
 
 variable "oidc_provider_arn" {
-  description = "OIDC Provider ARN for IRSA"
+  description = "OIDC provider ARN for IRSA"
   type        = string
 }
