@@ -3,11 +3,13 @@ permissions:
   contents: read  # Required for actions/checkout
 
 name: Terraform-AWS-Infra-Deployment
-
 on:
+  push:
+    branches:
+      - pre-release
   pull_request:
-    branches: [main]
-
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       environment:
