@@ -40,6 +40,7 @@ module "aws_alb_controller" {
   main_region       = var.main_region
   cluster_name      = var.cluster_name
   vpc_id            = module.vpc.vpc_id
+  account_id = var.aws_account_id
   oidc_provider_arn = module.eks.oidc_provider_arn
 
   depends_on = [module.eks]
