@@ -25,13 +25,18 @@ resource "aws_iam_role" "lb_controller" {
 data "aws_iam_policy_document" "assume_role_policy" {
   statement {
     actions = ["sts:AssumeRoleWithWebIdentity"]
+
     principals {
       type        = "Federated"
       identifiers = [var.oidc_provider_arn]
     }
+
     condition {
       test     = "StringEquals"
-      variable = "${replace(var.oidc_provider_arn, "arn:aws:iam::", "")}:sub"
+
+      # Correct: extract the URL path only, remove the ARN prefix
+      variable = "${replace(var.oidc_provider_arn, "arn:aws:iam::${var.account_id}:oidc-provider/", "")}:sub"
+
       values   = ["system:serviceaccount:kube-system:aws-load-balancer-controller"]
     }
   }
