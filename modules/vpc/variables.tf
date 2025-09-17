@@ -2,6 +2,6 @@
 # General Variables from root module
 ################################################################################
 
-variable "main-region" {
+variable "main_region" {
   type    = string
 }

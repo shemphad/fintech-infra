@@ -117,7 +117,7 @@ resource "aws_instance" "eks_client_node" {
 
 resource "aws_eip" "eks_client_eip" {
   instance = aws_instance.eks_client_node.id
-  vpc      = true
+  domain = "vpc"
 
   depends_on = [
     aws_instance.eks_client_node
