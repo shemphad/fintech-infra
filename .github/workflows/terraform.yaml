@@ -6,10 +6,11 @@ name: Terraform-AWS-Infra-Deployment
 on:
   push:
     branches:
-      - pre-release   
+      - release   
   pull_request:
     branches:
-      - main
+      - main 
+      - release
   workflow_dispatch:
     inputs:
       environment:
