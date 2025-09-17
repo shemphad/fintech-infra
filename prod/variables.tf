@@ -5,7 +5,7 @@
 variable "aws_account_id" {
   description = "AWS Account ID"
   type        = string
-  default     = "999568710647"
+  default     = "327019199684"
 }
 
 variable "aws_region" {
@@ -52,7 +52,7 @@ variable "cluster_name" {
 variable "rolearn" {
   description = "IAM role ARN to be added to the aws-auth configmap as admin"
   type        = string
-  default     = "arn:aws:iam::999568710647:role/terraform-create-role"
+  default     = "arn:aws:iam::327019199684:role/terraform-create-role"
 }
 
 
