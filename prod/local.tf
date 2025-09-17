@@ -2,7 +2,7 @@
 data "aws_ami" "ubuntu_latest" {
   count       = var.ami_id == "" ? 1 : 0
   most_recent = true
-  owners      = ["327019199684"] # Canonical
+  owners      = ["099720109477"] # Canonical
 
   filter {
     name   = "name"
