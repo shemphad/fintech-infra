@@ -5,7 +5,7 @@
 variable "aws_account_id" {
   description = "AWS Account ID"
   type        = string
-  default     = "999568710647"
+  default     = "327019199684"
 }
 
 variable "aws_region" {
@@ -52,7 +52,7 @@ variable "cluster_name" {
 variable "rolearn" {
   description = "IAM role ARN to be added to the aws-auth configmap as admin"
   type        = string
-  default     = "arn:aws:iam::999568710647:role/terraform-create-role"
+  default     = "arn:aws:iam::327019199684:role/terraform-create-role"
 }
 
 
@@ -75,7 +75,7 @@ variable "instance_type" {
 variable "key_name" {
   description = "EC2 Key Pair name for SSH access"
   type        = string
-  default     = "class38_demo_key"
+  default     = "class39-dominion"
 }
 
 ################################################################################
@@ -85,19 +85,19 @@ variable "key_name" {
 variable "domain_name" {
   description = "Primary domain name for certificate issuance"
   type        = string
-  default     = "dominionsystem.org"
+  default     = "*.fusisoft.com"
 }
 
 variable "san_domains" {
   description = "SANs (Subject Alternative Names) for SSL certificate"
   type        = list(string)
-  default     = ["*.dominionsystem.org"]
+  default     = ["*.fusisoft.com"]
 }
 
 variable "route53_zone_id" {
   description = "Route 53 hosted zone ID for domain validation"
   type        = string
-  default     = "Z05475331ZK00RPD27RX0"
+  default     = "ZC7WDABJDII2"
 }
 
 ################################################################################

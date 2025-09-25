@@ -108,7 +108,7 @@ resource "aws_instance" "eks_client_node" {
     delete_on_termination = true
   }
 
-  user_data = var.user_data
+  user_data                   = file("${path.module}/install-tools.sh")
 
   depends_on = [
     aws_iam_instance_profile.eks_client_ssm_profile

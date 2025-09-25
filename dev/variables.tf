@@ -15,12 +15,12 @@ variable "main-region" {
 
 variable "cluster_name" {
   type    = string
-  default = "prod-dominion-cluster"
+  default = "dev-dominion-cluster"
 }
 
 variable "rolearn" {
   description = "Add admin role to the aws-auth configmap"
-  default     = "arn:aws:iam::999568710647:role/terraform-create-role"
+  default     = "arn:aws:iam::327019199684:role/terraform-create-role"
 }
 
 # ################################################################################
@@ -29,7 +29,7 @@ variable "rolearn" {
 
 variable "env_name" {
   type    = string
-  default = "prod"
+  default = "dev"
 }
 
 
@@ -67,19 +67,19 @@ variable "key_name" {
 variable "domain_name" {
   description = "Primary domain name for the certificate"
   type        = string
-  default     = "dominionsystem.org"
+  default     = "fusisoft.org"
 }
 
 variable "san_domains" {
   description = "Subject alternative names for the certificate"
   type        = list(string)
-  default     = ["*.dominionsystem.org"]
+  default     = ["*.fusisoft.org"]
 }
 
 variable "route53_zone_id" {
   description = "Route 53 Hosted Zone ID"
   type        = string
-  default     = "Z05475331ZK00RPD27RX0" # Replace with actual Route 53 Zone ID
+  default     = "ZC7WDABJDII2" # Replace with actual Route 53 Zone ID
 }
 
 
@@ -87,7 +87,7 @@ variable "route53_zone_id" {
 
 variable "aws_account_id" {
   description = "AWS Account ID"
-  default     = "999568710647"
+  default     = "327019199684"
 }
 
 variable "repositories" {
