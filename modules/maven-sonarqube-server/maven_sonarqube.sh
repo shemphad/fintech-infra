@@ -7,12 +7,14 @@ SONARQUBE_VERSION="10.5.1.90531"
 POSTGRES_USER="ddsonar"
 POSTGRES_DB="ddsonarqube"
 POSTGRES_PASSWORD="Team@123"
+export DEBIAN_FRONTEND=noninteractive
 
 # ===== BETTER TRAP FOR DEBUGGING =====
 trap 'echo " ERROR at line $LINENO"; exit 1' ERR
 
 echo "=========================================="
 echo "  Starting SonarQube & dependencies setup"
+echo "  Target: Ubuntu 20.04 (focal)"
 echo "=========================================="
 
 # ===== UPDATE SYSTEM =====
@@ -21,7 +23,7 @@ sudo apt-get update -y
 
 # ===== INSTALL BASE PACKAGES =====
 echo "=== Installing base dependencies ==="
-sudo apt-get install -y wget unzip curl zip gnupg lsb-release openjdk-17-jdk tar
+sudo apt-get install -y wget unzip curl zip gnupg lsb-release openjdk-17-jdk tar ca-certificates procps
 
 # ===== INSTALL kubectl =====
 install_kubectl() {
@@ -72,20 +74,17 @@ install_maven() {
     rm "$MAVEN_TAR"
 
     echo "Configuring Maven environment..."
-    sudo tee /etc/profile.d/maven.sh > /dev/null <<EOF
+    sudo tee /etc/profile.d/maven.sh > /dev/null <<'EOF'
 export M2_HOME=/opt/maven
-export PATH=\$M2_HOME/bin:\$PATH
+export PATH=$M2_HOME/bin:$PATH
 EOF
 
     sudo chmod +x /etc/profile.d/maven.sh
-
-    echo "Patching ~/.bashrc to always source Maven..."
     if ! grep -q "/etc/profile.d/maven.sh" ~/.bashrc; then
       echo 'if [ -f /etc/profile.d/maven.sh ]; then source /etc/profile.d/maven.sh; fi' >> ~/.bashrc
     fi
-
-    # Source for current session
-    source /etc/profile.d/maven.sh
+    # apply for current shell if interactive
+    source /etc/profile.d/maven.sh || true
   else
     echo "Maven already installed."
   fi
@@ -97,11 +96,19 @@ EOF
 # ===== SYSCTL CONFIG FOR ELASTICSEARCH =====
 echo "Configuring vm.max_map_count..."
 sudo sysctl -w vm.max_map_count=262144
-grep -q "vm.max_map_count=262144" /etc/sysctl.conf || echo 'vm.max_map_count=262144' | sudo tee -a /etc/sysctl.conf
+grep -q "vm.max_map_count=262144" /etc/sysctl.conf || echo 'vm.max_map_count=262144' | sudo tee -a /etc/sysctl.conf >/dev/null
+
+# Apply login limits for SonarQube (Elasticsearch needs these)
+echo "Configuring limits for SonarQube..."
+sudo tee /etc/security/limits.d/sonarqube.conf >/dev/null <<'EOF'
+ddsonar   -   nofile   65536
+ddsonar   -   nproc    4096
+EOF
 
 # ===== INSTALL POSTGRESQL =====
 echo "=== Installing PostgreSQL ==="
 if ! command -v psql &>/dev/null; then
+  # Use PGDG on focal; alternatively comment this block to use Ubuntu stock repo
   wget -qO - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /usr/share/keyrings/postgresql.gpg
   echo "deb [signed-by=/usr/share/keyrings/postgresql.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
   sudo apt-get update -y
@@ -110,23 +117,36 @@ else
   echo "PostgreSQL already installed."
 fi
 
+# Ensure service enabled and running
+sudo systemctl enable --now postgresql
+
+# Ensure localhost password auth is permitted (avoid peer/ident surprises)
+PG_HBA="$(sudo -u postgres psql -tAc "SHOW hba_file;")"
+if ! sudo grep -Eq '^[[:space:]]*host[[:space:]]+all[[:space:]]+all[[:space:]]+127\.0\.0\.1/32[[:space:]]+(md5|scram-sha-256)' "$PG_HBA"; then
+  echo "Adding localhost md5 to $PG_HBA..."
+  sudo sed -i '1ihost    all             all             127.0.0.1/32            md5' "$PG_HBA"
+  sudo systemctl restart postgresql
+fi
+
 echo "Configuring PostgreSQL user and DB..."
-sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='$POSTGRES_USER'" | grep -q 1 || \
-  sudo -u postgres psql -c "CREATE USER $POSTGRES_USER WITH ENCRYPTED PASSWORD '$POSTGRES_PASSWORD';"
+sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='${POSTGRES_USER}'" | grep -q 1 || \
+  sudo -u postgres psql -c "CREATE USER ${POSTGRES_USER} WITH ENCRYPTED PASSWORD '${POSTGRES_PASSWORD}';"
 
-sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='$POSTGRES_DB'" | grep -q 1 || \
-  sudo -u postgres psql -c "CREATE DATABASE $POSTGRES_DB OWNER $POSTGRES_USER;"
+sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='${POSTGRES_DB}'" | grep -q 1 || \
+  sudo -u postgres psql -c "CREATE DATABASE ${POSTGRES_DB} OWNER ${POSTGRES_USER};"
 
-echo "GRANT ALL PRIVILEGES ON DATABASE $POSTGRES_DB TO $POSTGRES_USER;" | sudo -u postgres psql
+echo "GRANT ALL PRIVILEGES ON DATABASE ${POSTGRES_DB} TO ${POSTGRES_USER};" | sudo -u postgres psql
 
 # ===== INSTALL SONARQUBE =====
 echo "=== Installing SonarQube ==="
-if [ ! -d "/opt/sonarqube" ]; then
+sudo mkdir -p /opt/sonarqube
+if [ ! -x "/opt/sonarqube/bin/linux-x86-64/sonar.sh" ]; then
   echo "Downloading SonarQube..."
   wget -nv "https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-${SONARQUBE_VERSION}.zip"
   sudo unzip -o "sonarqube-${SONARQUBE_VERSION}.zip" -d /opt
-  sudo mv "/opt/sonarqube-${SONARQUBE_VERSION}" /opt/sonarqube
-  rm "sonarqube-${SONARQUBE_VERSION}.zip"
+  sudo rm -rf /opt/sonarqube/*
+  sudo mv "/opt/sonarqube-${SONARQUBE_VERSION}/"* /opt/sonarqube/
+  sudo rm -rf "/opt/sonarqube-${SONARQUBE_VERSION}" "sonarqube-${SONARQUBE_VERSION}.zip"
 else
   echo "SonarQube already present in /opt/sonarqube"
 fi
@@ -139,17 +159,17 @@ sudo chmod +x /opt/sonarqube/bin/linux-x86-64/sonar.sh
 
 echo "Configuring SonarQube DB connection..."
 sudo tee /opt/sonarqube/conf/sonar.properties > /dev/null <<EOF
-sonar.jdbc.username=$POSTGRES_USER
-sonar.jdbc.password=$POSTGRES_PASSWORD
-sonar.jdbc.url=jdbc:postgresql://localhost:5432/$POSTGRES_DB
+sonar.jdbc.username=${POSTGRES_USER}
+sonar.jdbc.password=${POSTGRES_PASSWORD}
+sonar.jdbc.url=jdbc:postgresql://localhost:5432/${POSTGRES_DB}
 EOF
 
 # ===== CREATE SYSTEMD SERVICE =====
 echo "=== Creating systemd unit for SonarQube ==="
-sudo tee /etc/systemd/system/sonar.service > /dev/null <<EOF
+sudo tee /etc/systemd/system/sonar.service > /dev/null <<'EOF'
 [Unit]
 Description=SonarQube service
-After=network.target
+After=network.target postgresql.service
 
 [Service]
 Type=forking
@@ -160,6 +180,8 @@ Group=ddsonar
 Restart=always
 LimitNOFILE=65536
 LimitNPROC=4096
+# Ensure PAM applies limits to the service
+PAMName=login
 
 [Install]
 WantedBy=multi-user.target
@@ -169,13 +191,14 @@ sudo systemctl daemon-reload
 sudo systemctl enable sonar.service
 sudo systemctl restart sonar.service
 
-echo "SonarQube is running. Access it at http://<your-server-ip>:9000"
+echo "SonarQube is starting. Access it at:  http://<your-server-ip>:9000"
 
-# ===== CALL INSTALL FUNCTIONS =====
+# ===== CALL OPTIONAL TOOLS =====
 install_kubectl
 install_aws_cli
 install_maven
 
 echo "ALL DONE! SonarQube setup completed successfully."
+echo "If the service exits on first boot, re-login (to apply limits) and run: sudo systemctl restart sonar"
 echo "Open a new SSH session or run: source ~/.bashrc"
 echo "Test Maven: mvn -version"

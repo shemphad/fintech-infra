@@ -1,0 +1,145 @@
+pipeline {
+  agent { label 'linux' }
+
+  options {
+    disableConcurrentBuilds()
+    timestamps()
+  }
+
+  parameters {
+    choice(name: 'BRANCH', choices: ['release', 'dev', 'main'], description: 'Git branch to build')
+    choice(name: 'ACTION', choices: ['apply', 'destroy'], description: 'Terraform action')
+    string(name: 'REGION', defaultValue: 'us-east-2', description: 'AWS Region')
+    booleanParam(name: 'DEPLOY_OVERRIDE', defaultValue: false,
+      description: 'Enable deploy on non-release branches (dev or main)')
+  }
+
+  environment {
+    AWS_REGION = "${params.REGION ?: 'us-east-2'}"
+    GIT_REPO  = 'https://github.com/ndiforfusi/fintech-infra.git'
+  }
+
+  tools {
+    // keep only if you configured a tool named 'terraform-1.5.0' under Manage Jenkins → Tools
+    terraform 'terraform-1.5.0'
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout([$class: 'GitSCM',
+          branches: [[name: "*/${params.BRANCH}"]],
+          userRemoteConfigs: [[url: env.GIT_REPO, credentialsId: 'github-pat']], // <-- set your GitHub creds ID
+          extensions: [[$class: 'LocalBranch', localBranch: "${params.BRANCH}"]] // optional: creates local branch
+        ])
+      }
+    }
+
+    stage('Resolve Environment') {
+      steps {
+        script {
+          // In a single job we drive the branch from the parameter
+          def branch = params.BRANCH?.trim() ?: 'release'
+          def supported = ['dev','release','main'].contains(branch)
+          env.BUILD_SUPPORTED = supported ? 'true' : 'false'
+
+          // Map branch -> Terraform env/dir
+          env.TF_ENV = (branch == 'dev') ? 'dev' : 'prod'
+          env.TF_DIR = env.TF_ENV
+
+          // Deploy rules:
+          // - release deploys by default
+          // - dev/main require DEPLOY_OVERRIDE=true
+          def defaultDeploy = (branch == 'release')
+          env.SHOULD_DEPLOY = ((defaultDeploy) || params.DEPLOY_OVERRIDE) && supported ? 'true' : 'false'
+
+          echo "Branch=${branch} | Supported=${env.BUILD_SUPPORTED} | TF_ENV=${env.TF_ENV} | TF_DIR=${env.TF_DIR} | SHOULD_DEPLOY=${env.SHOULD_DEPLOY}"
+        }
+      }
+    }
+
+    stage('Verify working directory') {
+      steps {
+        sh 'echo "Working in ./${TF_DIR}"; ls -la "./${TF_DIR}" || true'
+      }
+    }
+
+    stage('Terraform Plan') {
+      steps {
+        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
+          credentialsId: 'aws-creds',
+          accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+          secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+          dir(env.TF_DIR) {
+            sh '''
+              terraform fmt -check
+              terraform init -upgrade -backend-config="key=${TF_ENV}/terraform.tfstate"
+              terraform plan -lock=false -input=false -no-color | tee ../plan-${TF_ENV}.txt
+            '''
+          }
+        }
+      }
+      post {
+        always {
+          archiveArtifacts artifacts: "plan-${env.TF_ENV}.txt", fingerprint: true, onlyIfSuccessful: false
+        }
+      }
+    }
+
+    stage('Approval') {
+      when {
+        allOf {
+          expression { env.BUILD_SUPPORTED == 'true' }
+          expression { env.SHOULD_DEPLOY == 'true' }
+          // removed changeRequest(); it's MBP/PR-only
+        }
+      }
+      steps {
+        script {
+          timeout(time: 2, unit: 'HOURS') {
+            input message: "Approve deployment to ${env.TF_ENV} from branch ${params.BRANCH}?"
+          }
+        }
+      }
+    }
+
+    stage('Deploy') {
+      when {
+        allOf {
+          expression { env.BUILD_SUPPORTED == 'true' }
+          expression { env.SHOULD_DEPLOY == 'true' }
+        }
+      }
+      steps {
+        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
+          credentialsId: 'aws-creds',
+          accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+          secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+          dir(env.TF_DIR) {
+            script {
+              sh 'terraform init -backend-config="key=${TF_ENV}/terraform.tfstate"'
+              if ((params.ACTION ?: 'apply').toLowerCase() == 'destroy') {
+                sh 'terraform destroy -auto-approve -lock=false -input=false'
+              } else {
+                sh 'terraform apply -auto-approve -lock=false -input=false'
+              }
+            }
+          }
+        }
+      }
+    }
+
+    stage('Plan-only Notice (Unsupported Branch)') {
+      when { expression { env.BUILD_SUPPORTED != 'true' } }
+      steps {
+        echo "Branch ${params.BRANCH} is not in [dev, release, main]. Running plan only; deploy is disabled."
+      }
+    }
+  }
+
+  post {
+    always {
+      echo "Done: BRANCH=${params.BRANCH} ENV=${env.TF_ENV} DEPLOY=${env.SHOULD_DEPLOY} ACTION=${params.ACTION ?: 'apply'} REGION=${env.AWS_REGION}"
+    }
+  }
+}
