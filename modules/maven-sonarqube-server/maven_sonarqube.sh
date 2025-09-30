@@ -55,35 +55,52 @@ install_aws_cli() {
 
 # ===== INSTALL MAVEN =====
 install_maven() {
-  if ! command -v mvn &>/dev/null || [[ "$(mvn -version | grep 'Apache Maven')" != *"$MAVEN_VERSION"* ]]; then
+  if ! command -v mvn &>/dev/null || [[ "$(mvn -version 2>/dev/null | grep 'Apache Maven' || true)" != *"$MAVEN_VERSION"* ]]; then
     echo "Installing Maven $MAVEN_VERSION..."
+
+    sudo mkdir -p /opt
+
     MAVEN_TAR="apache-maven-${MAVEN_VERSION}-bin.tar.gz"
-    MAVEN_URL="https://dlcdn.apache.org/maven/maven-3/${MAVEN_VERSION}/binaries/${MAVEN_TAR}"
+    MAVEN_BASE_URLS=(
+      "https://archive.apache.org/dist/maven/maven-3"
+      "https://downloads.apache.org/maven/maven-3"
+      "https://dlcdn.apache.org/maven/maven-3"
+    )
 
-    echo "Downloading Maven from $MAVEN_URL..."
-    wget -nv "$MAVEN_URL" -O "$MAVEN_TAR"
+    rm -f "$MAVEN_TAR"
+    ok=0
+    for base in "${MAVEN_BASE_URLS[@]}"; do
+      url="${base}/${MAVEN_VERSION}/binaries/${MAVEN_TAR}"
+      echo "  -> Trying $url"
+      if curl -fsI "$url" >/dev/null; then
+        wget -nv "$url" -O "$MAVEN_TAR"
+        ok=1
+        break
+      fi
+    done
 
-    if [ ! -f "$MAVEN_TAR" ]; then
-      echo " Maven download failed! File $MAVEN_TAR not found."
+    if [[ "$ok" -ne 1 || ! -s "$MAVEN_TAR" ]]; then
+      echo "Failed to download Maven $MAVEN_VERSION from known mirrors."
       exit 1
     fi
 
     echo "Extracting Maven..."
     sudo tar -xzf "$MAVEN_TAR" -C /opt
     sudo ln -sfn "/opt/apache-maven-${MAVEN_VERSION}" /opt/maven
-    rm "$MAVEN_TAR"
+    rm -f "$MAVEN_TAR"
 
     echo "Configuring Maven environment..."
-    sudo tee /etc/profile.d/maven.sh > /dev/null <<'EOF'
+    sudo tee /etc/profile.d/maven.sh >/dev/null <<'EOF'
 export M2_HOME=/opt/maven
 export PATH=$M2_HOME/bin:$PATH
 EOF
-
     sudo chmod +x /etc/profile.d/maven.sh
-    if ! grep -q "/etc/profile.d/maven.sh" ~/.bashrc; then
+
+    # Add for future shells; ignore if already present
+    grep -q "/etc/profile.d/maven.sh" ~/.bashrc || \
       echo 'if [ -f /etc/profile.d/maven.sh ]; then source /etc/profile.d/maven.sh; fi' >> ~/.bashrc
-    fi
-    # apply for current shell if interactive
+
+    # Apply for current non-login shell without failing the script
     source /etc/profile.d/maven.sh || true
   else
     echo "Maven already installed."
@@ -92,6 +109,7 @@ EOF
   echo "Verifying Maven..."
   mvn -version
 }
+
 
 # ===== SYSCTL CONFIG FOR ELASTICSEARCH =====
 echo "Configuring vm.max_map_count..."
@@ -108,22 +126,33 @@ EOF
 # ===== INSTALL POSTGRESQL =====
 echo "=== Installing PostgreSQL ==="
 if ! command -v psql &>/dev/null; then
-  # Use PGDG on focal; alternatively comment this block to use Ubuntu stock repo
-  wget -qO - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /usr/share/keyrings/postgresql.gpg
-  echo "deb [signed-by=/usr/share/keyrings/postgresql.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
-  sudo apt-get update -y
+  # Prefer PGDG over HTTPS; fall back to Ubuntu stock if update fails
+  sudo rm -f /etc/apt/sources.list.d/pgdg.list /usr/share/keyrings/postgresql.gpg || true
+  sudo install -m 0755 -d /usr/share/keyrings
+  curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+  | sudo gpg --dearmor -o /usr/share/keyrings/postgresql.gpg
+
+  echo "deb [signed-by=/usr/share/keyrings/postgresql.gpg] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+  | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+
+  if ! sudo apt-get update -y; then
+    echo "PGDG unavailable; falling back to Ubuntu stock PostgreSQL..."
+    sudo rm -f /etc/apt/sources.list.d/pgdg.list
+    sudo apt-get update -y
+  fi
+
   sudo apt-get install -y postgresql postgresql-contrib
 else
   echo "PostgreSQL already installed."
 fi
 
-# Ensure service enabled and running
+# Ensure service is enabled/running
 sudo systemctl enable --now postgresql
 
-# Ensure localhost password auth is permitted (avoid peer/ident surprises)
+# Ensure localhost password auth is allowed (avoid 'peer' auth surprises)
 PG_HBA="$(sudo -u postgres psql -tAc "SHOW hba_file;")"
 if ! sudo grep -Eq '^[[:space:]]*host[[:space:]]+all[[:space:]]+all[[:space:]]+127\.0\.0\.1/32[[:space:]]+(md5|scram-sha-256)' "$PG_HBA"; then
-  echo "Adding localhost md5 to $PG_HBA..."
+  echo "Adding localhost md5 to $PG_HBA"
   sudo sed -i '1ihost    all             all             127.0.0.1/32            md5' "$PG_HBA"
   sudo systemctl restart postgresql
 fi

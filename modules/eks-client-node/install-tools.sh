@@ -114,3 +114,111 @@ log "All set! Versions:"
 terraform version | head -n1
 aws --version
 kubectl version --client --short
+
+#--- dynamic EKS kubeconfig update -----------------------------------------
+# Strategy:
+# 1) REGION: AWS_REGION/AWS_DEFAULT_REGION -> IMDSv2 -> AWS config -> us-east-1
+# 2) CLUSTER: EKS_CLUSTER_NAME -> CLUSTER_PATTERN match -> single cluster -> newest cluster
+
+discover_region() {
+  if [[ -n "${AWS_REGION:-}" ]]; then echo "$AWS_REGION"; return; fi
+  if [[ -n "${AWS_DEFAULT_REGION:-}" ]]; then echo "$AWS_DEFAULT_REGION"; return; fi
+
+  # IMDSv2 (with IMDSv1 fallback)
+  local token az
+  token="$(curl -sS -m 2 -X PUT 'http://169.254.169.254/latest/api/token' \
+            -H 'X-aws-ec2-metadata-token-ttl-seconds: 60' || true)"
+  if [[ -n "$token" ]]; then
+    az="$(curl -sS -m 2 -H "X-aws-ec2-metadata-token: $token" \
+          'http://169.254.169.254/latest/meta-data/placement/availability-zone' || true)"
+  else
+    az="$(curl -sS -m 2 'http://169.254.169.254/latest/meta-data/placement/availability-zone' || true)"
+  fi
+  if [[ -n "$az" ]]; then echo "${az::-1}"; return; fi
+
+  local cfg_region
+  cfg_region="$(aws configure get region 2>/dev/null || true)"
+  if [[ -n "$cfg_region" ]]; then echo "$cfg_region"; return; fi
+
+  echo "us-east-1"
+}
+
+discover_cluster() {
+  local region="$1"
+  local clusters
+  # list-clusters returns names; use text to avoid jq dependency
+  clusters=($(aws eks list-clusters --region "$region" --output text 2>/dev/null || true))
+
+  # Explicit name override
+  if [[ -n "${EKS_CLUSTER_NAME:-}" ]]; then
+    echo "$EKS_CLUSTER_NAME"
+    return 0
+  fi
+
+  # Optional pattern preference (case-insensitive substring)
+  if [[ -n "${CLUSTER_PATTERN:-}" && "${#clusters[@]}" -gt 0 ]]; then
+    local c lc patt
+    patt="$(tr '[:upper:]' '[:lower:]' <<<"$CLUSTER_PATTERN")"
+    for c in "${clusters[@]}"; do
+      lc="$(tr '[:upper:]' '[:lower:]' <<<"$c")"
+      if [[ "$lc" == *"$patt"* ]]; then
+        echo "$c"
+        return 0
+      fi
+    done
+  fi
+
+  # If exactly one cluster, use it
+  if [[ "${#clusters[@]}" -eq 1 ]]; then
+    echo "${clusters[0]}"
+    return 0
+  fi
+
+  # If multiple, pick the newest by createdAt
+  if [[ "${#clusters[@]}" -gt 1 ]]; then
+    local newest="" newest_ts=0 c ts
+    for c in "${clusters[@]}"; do
+      ts="$(aws eks describe-cluster --region "$region" --name "$c" \
+            --query 'cluster.createdAt' --output text 2>/dev/null || true)"
+      # convert to epoch seconds (Ubuntu date can parse ISO8601)
+      if [[ -n "$ts" ]]; then
+        ts="$(date -d "$ts" +%s 2>/dev/null || echo 0)"
+      else
+        ts=0
+      fi
+      if (( ts > newest_ts )); then
+        newest_ts="$ts"
+        newest="$c"
+      fi
+    done
+    if [[ -n "$newest" ]]; then
+      echo "$newest"
+      return 0
+    fi
+  fi
+
+  # Nothing found
+  echo ""
+}
+
+configure_kube() {
+  local region cluster
+  region="$(discover_region)"
+  cluster="$(discover_cluster "$region")"
+
+  if [[ -z "$cluster" ]]; then
+    echo "Error: No EKS clusters found in region '$region' (or no permissions)."
+    echo "Tip: set EKS_CLUSTER_NAME or CLUSTER_PATTERN, or export AWS_REGION/AWS_DEFAULT_REGION."
+    return 1
+  fi
+
+  mkdir -p ~/.kube
+  echo "Updating kubeconfig for cluster '$cluster' in region '$region'..."
+  aws eks update-kubeconfig --region "$region" --name "$cluster"
+
+  # Optional: echo the current context
+  kubectl config current-context || true
+}
+
+configure_kube
+
