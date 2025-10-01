@@ -76,7 +76,7 @@ sudo apt update
 sudo apt install -y wget tar git openjdk-17-jdk
 
 # Define Maven version
-MAVEN_VERSION=3.9.10
+MAVEN_VERSION=3.9.11
 MAVEN_DIR=/opt/maven
 MAVEN_ARCHIVE=apache-maven-$MAVEN_VERSION-bin.tar.gz
              
@@ -88,7 +88,7 @@ sudo tar -xzf /tmp/$MAVEN_ARCHIVE -C $MAVEN_DIR
 
 
 # Set environment variables
-echo "export M2_HOME=/opt/maven/apache-maven-3.9.10" | sudo tee /etc/profile.d/maven.sh
+echo "export M2_HOME=/opt/maven/apache-maven-3.9.11" | sudo tee /etc/profile.d/maven.sh
 echo "export PATH=\$M2_HOME/bin:\$PATH" | sudo tee -a /etc/profile.d/maven.sh
 
 # Apply env vars immediately
