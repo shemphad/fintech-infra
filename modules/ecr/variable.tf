@@ -1,6 +1,6 @@
 variable "aws_account_id" {
   description = "AWS Account ID"
-  default     = "999568710647"
+  default     = "418272782718"
 }
 
 variable "repositories" {
@@ -12,7 +12,7 @@ variable "repositories" {
 variable "tags" {
   description = "Common tags for the cluster resources"
   type        = map(string)
-  default     = {
+  default = {
     env       = "dev",
     terraform = "true"
   }

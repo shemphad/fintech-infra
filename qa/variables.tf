@@ -20,7 +20,7 @@ variable "cluster_name" {
 
 variable "rolearn" {
   description = "Add admin role to the aws-auth configmap"
-  default     = "arn:aws:iam::327019199684:role/terraform-create-role"
+  default     = "arn:aws:iam::418272782718:role/terraform-create-role"
 }
 
 # ################################################################################
@@ -60,26 +60,26 @@ variable "instance_type" {
 variable "key_name" {
   description = "The key name for the instance"
   type        = string
-  default     = "class38_demo_key"
+  default     = "key2"
 }
 
 #Amazon Certificate Manager
 variable "domain_name" {
   description = "Primary domain name for the certificate"
   type        = string
-  default     = "fusisoft.org"
+  default     = "shemphadglobalconcept.com"
 }
 
 variable "san_domains" {
   description = "Subject alternative names for the certificate"
   type        = list(string)
-  default     = ["*.fusisoft.org"]
+  default     = ["*.shemphadglobalconcept.com"]
 }
 
 variable "route53_zone_id" {
   description = "Route 53 Hosted Zone ID"
   type        = string
-  default     = "ZC7WDABJDII2" # Replace with actual Route 53 Zone ID
+  default     = "Z0417665P4L85VA3F3F6" # Replace with actual Route 53 Zone ID
 }
 
 
@@ -87,7 +87,7 @@ variable "route53_zone_id" {
 
 variable "aws_account_id" {
   description = "AWS Account ID"
-  default     = "327019199684"
+  default     = "418272782718"
 }
 
 variable "repositories" {
