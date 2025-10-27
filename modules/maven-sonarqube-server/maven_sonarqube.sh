@@ -1,4 +1,6 @@
 #!/bin/bash
+#Run the sed command to eliminate hidden characters:
+#sed -i 's/\r$//' sonar.sh
 set -euo pipefail
 
 # ===== VERSIONS / VARS (Configuration) =====
@@ -221,3 +223,4 @@ echo "==========================================================================
 echo "✅ ALL DONE! Access SonarQube at: http://<server-ip>:9000"
 echo "NOTE: Default login is admin/admin. Change this immediately!"
 echo "=========================================================================="
+
