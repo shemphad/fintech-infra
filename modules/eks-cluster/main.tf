@@ -1,4 +1,4 @@
-##############################################
+###############################################
 # EKS Data + Auth
 ##############################################
 
@@ -18,61 +18,6 @@ provider "kubernetes" {
   }
 }
 
-locals {
-  common_tags = {
-    Environment = "Prod"
-    ManagedBy   = "Terraform"
-    Project     = "EKS-Cluster"
-  }
-}
-
-##############################################
-# IAM Roles (FIX: These roles were missing definitions)
-##############################################
-
-# Role for general EKS cluster administration access (referenced by the 'general' entry)
-resource "aws_iam_role" "eks_access_role" {
-  name = "eks-access-role"
-  
-  # NOTE: The Principal MUST match the entity that will assume this role (e.g., a specific User ARN, another role, or an OIDC provider).
-  # We use the current account ARN as a placeholder for simplicity.
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole",
-        Effect = "Allow",
-        Principal = {
-          AWS = data.aws_caller_identity.current.arn 
-        }
-      },
-    ]
-  })
-  tags = local.common_tags
-}
-
-# Role for a GitHub Runner or CI/CD system (referenced by the 'github_runner' entry)
-resource "aws_iam_role" "github_runner_ssm_role" {
-  name = "github-runner-ssm-role"
-  
-  # NOTE: The Principal MUST match the entity that will assume this role (e.g., an OIDC provider for GitHub Actions).
-  # We use the current account ARN as a placeholder for simplicity.
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole",
-        Effect = "Allow",
-        Principal = {
-          AWS = data.aws_caller_identity.current.arn 
-        }
-      },
-    ]
-  })
-  tags = local.common_tags
-}
-
-
 ##############################################
 # EKS Control Plane + Node Groups + Add-ons
 ##############################################
@@ -81,8 +26,8 @@ module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 20.0"
 
-  cluster_name             = var.cluster_name
-  cluster_version          = "1.32"
+  cluster_name    = var.cluster_name
+  cluster_version = "1.32"
 
   enable_cluster_creator_admin_permissions = true
   cluster_endpoint_public_access           = true
@@ -111,22 +56,22 @@ module "eks" {
     }
 
     coredns = {
-      most_recent     = true
+      most_recent       = true
       resolve_conflicts = "OVERWRITE"
     }
 
     kube-proxy = {
-      most_recent     = true
+      most_recent       = true
       resolve_conflicts = "OVERWRITE"
     }
 
     eks-pod-identity-agent = {
-      most_recent     = true
+      most_recent       = true
       resolve_conflicts = "OVERWRITE"
     }
 
     aws-ebs-csi-driver = {
-      most_recent     = true
+      most_recent       = true
       resolve_conflicts = "OVERWRITE"
     }
   }
@@ -135,12 +80,12 @@ module "eks" {
   # Managed Node Groups - Best Practice
   ##############################################
   eks_managed_node_group_defaults = {
-    ami_type        = "AL2023_x86_64_STANDARD"
-    instance_types  = ["t3.medium"]
+    ami_type       = "AL2023_x86_64_STANDARD"
+    instance_types = ["t3.medium"]
 
-    min_size      = 3
-    max_size      = 5
-    desired_size  = 3
+    min_size     = 3
+    max_size     = 5
+    desired_size = 3
 
     iam_role_additional_policies = {
       AmazonEKSWorkerNodePolicy          = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
@@ -162,11 +107,10 @@ module "eks" {
   access_entries = {
     general = {
       kubernetes_groups = ["eks-admins"]
-      # FIX: Reference the newly created IAM Role ARN
-      principal_arn = aws_iam_role.eks_access_role.arn 
+      principal_arn     = "arn:aws:iam::418272782718:role/eks-access-role"
       policy_associations = [
         {
-          policy_arn  = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+          policy_arn   = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
           access_scope = { type = "cluster" }
         }
       ]
@@ -174,11 +118,10 @@ module "eks" {
 
     github_runner = {
       kubernetes_groups = ["eks-admins"]
-      # FIX: Use the ARN reference for robustness
-      principal_arn     = aws_iam_role.github_runner_ssm_role.arn
+      principal_arn     = "arn:aws:iam::418272782718:role/github-runner-ssm-role"
       policy_associations = [
         {
-          policy_arn  = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+          policy_arn   = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
           access_scope = { type = "cluster" }
         }
       ]
